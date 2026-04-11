@@ -1,0 +1,78 @@
+---
+import { ClientRouter } from 'astro:transitions';
+
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <ClientRouter />
+    <style>
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        max-width: 48rem;
+        margin: 0 auto;
+        padding: 2rem;
+        color: #1a1a1a;
+        line-height: 1.6;
+      }
+      nav {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      nav a {
+        color: #2563eb;
+        text-decoration: none;
+      }
+      nav a:hover {
+        text-decoration: underline;
+      }
+      h1 {
+        margin-top: 0;
+      }
+      .controls {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        margin: 1.5rem 0;
+      }
+      .controls button {
+        padding: 0.5rem 1rem;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+        background: white;
+        cursor: pointer;
+        font-size: 0.875rem;
+      }
+      .controls button:hover {
+        background: #f3f4f6;
+      }
+      pre {
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        overflow-x: auto;
+        font-size: 0.8125rem;
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <a href="/">Home</a>
+      <a href="/about">About</a>
+    </nav>
+    <slot />
+  </body>
+</html>
