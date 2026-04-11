@@ -11,7 +11,8 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc && mkdir -p dist/styles && cp src/styles/base.css dist/styles/base.css"
+    "build": "tsc && mkdir -p dist/styles && cp src/styles/base.css dist/styles/base.css",
+    "dev": "tsc --watch"
   },
   "peerDependencies": {
     "astro": "^5.0.0 || ^6.0.0"
