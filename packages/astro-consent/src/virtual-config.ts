@@ -13,10 +13,14 @@ const VIRTUAL_INIT = 'virtual:astro-consent/init';
 const RESOLVED_CONFIG = '\0' + VIRTUAL_CONFIG;
 const RESOLVED_INIT = '\0' + VIRTUAL_INIT;
 
+function normalizePath(p: string): string {
+  return p.replace(/\\/g, '/');
+}
+
 export function vitePluginConsentConfig(config: SerializableConsentConfig): VitePlugin {
   // Resolve paths relative to this file's location in dist/
   const thisDir = dirname(fileURLToPath(import.meta.url));
-  const clientPath = resolve(thisDir, 'client.js');
+  const clientPath = normalizePath(resolve(thisDir, 'client.js'));
   return {
     name: 'vite-plugin-astro-consent',
 

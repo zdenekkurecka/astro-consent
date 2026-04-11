@@ -7,7 +7,8 @@ function escapeHtml(str: string): string {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function createBannerHTML(): string {
@@ -129,12 +130,11 @@ export function hideModal(): void {
 }
 
 export function updateModalToggles(categories: Record<string, boolean>): void {
-  for (const [key, value] of Object.entries(categories)) {
-    const input = document.querySelector<HTMLInputElement>(
-      `[data-cc-category="${key}"]`,
-    );
-    if (input && !input.disabled) {
-      input.checked = value;
+  const inputs = document.querySelectorAll<HTMLInputElement>('[data-cc-category]');
+  for (const input of inputs) {
+    const key = input.getAttribute('data-cc-category');
+    if (key && !input.disabled) {
+      input.checked = categories[key] ?? false;
     }
   }
 }

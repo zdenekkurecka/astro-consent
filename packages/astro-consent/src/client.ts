@@ -24,6 +24,7 @@ interface ConsentCallbacks {
 }
 
 let listenerAttached = false;
+let consentFiredThisSession = false;
 
 function fireCallback(
   callbacks: ConsentCallbacks,
@@ -50,7 +51,9 @@ export function initConsentManager(
   // Check consent state
   if (needsConsent(config.version)) {
     showBanner();
-  } else {
+  } else if (!consentFiredThisSession) {
+    // Fire onConsent once per session (not on every SPA navigation)
+    consentFiredThisSession = true;
     const existing = readConsent();
     if (existing) {
       fireCallback(callbacks, 'onConsent', existing);
@@ -74,6 +77,7 @@ export function initConsentManager(
           writeConsent(state);
           hideBanner();
           hideModal();
+          consentFiredThisSession = true;
           fireCallback(callbacks, 'onConsent', state);
           break;
         }
@@ -84,6 +88,7 @@ export function initConsentManager(
           writeConsent(state);
           hideBanner();
           hideModal();
+          consentFiredThisSession = true;
           fireCallback(callbacks, 'onConsent', state);
           break;
         }
@@ -94,6 +99,13 @@ export function initConsentManager(
           const current = readConsent();
           if (current) {
             updateModalToggles(current.categories);
+          } else {
+            // After reset: show defaults from config
+            const defaults: Record<string, boolean> = {};
+            for (const [key, cat] of Object.entries(config.categories)) {
+              defaults[key] = cat.default;
+            }
+            updateModalToggles(defaults);
           }
           showModal();
           break;
@@ -105,6 +117,7 @@ export function initConsentManager(
           const state = savePreferences(config, selections);
           writeConsent(state);
           hideModal();
+          consentFiredThisSession = true;
           fireCallback(callbacks, isUpdate ? 'onChange' : 'onConsent', state);
           break;
         }
@@ -126,6 +139,19 @@ export function initConsentManager(
         hideModal();
         if (needsConsent(config.version)) {
           showBanner();
+        }
+      }
+    });
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const modal = document.getElementById('cc-modal');
+        if (modal?.classList.contains('cc-visible')) {
+          hideModal();
+          if (needsConsent(config.version)) {
+            showBanner();
+          }
         }
       }
     });
@@ -166,6 +192,12 @@ export function initConsentManager(
       const current = readConsent();
       if (current) {
         updateModalToggles(current.categories);
+      } else {
+        const defaults: Record<string, boolean> = {};
+        for (const [key, cat] of Object.entries(config.categories)) {
+          defaults[key] = cat.default;
+        }
+        updateModalToggles(defaults);
       }
       showModal();
     },

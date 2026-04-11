@@ -28,7 +28,7 @@ export default function cookieConsent(userConfig: ConsentConfig): AstroIntegrati
         const thisDir = dirname(fileURLToPath(import.meta.url));
         const cssPath = resolve(thisDir, 'styles', 'base.css');
         const css = readFileSync(cssPath, 'utf-8');
-        injectScript('head-inline', `{const s=document.createElement('style');s.textContent=${JSON.stringify(css)};document.head.appendChild(s)}`);
+        injectScript('head-inline', `if(!document.getElementById('cc-styles')){const s=document.createElement('style');s.id='cc-styles';s.textContent=${JSON.stringify(css)};document.head.appendChild(s)}`);
 
         // 3. Inject client-side init module on every page
         injectScript('page', 'import "virtual:astro-consent/init";');

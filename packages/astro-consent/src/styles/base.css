@@ -1,16 +1,17 @@
-@import "tailwindcss";
-@source "../ui.ts";
+/* @zdenekkurecka/astro-consent — base styles */
 
-@theme {
-  --color-cc-primary: var(--cc-primary, #2563eb);
-  --color-cc-primary-hover: var(--cc-primary-hover, #1d4ed8);
-  --color-cc-bg: var(--cc-bg, #ffffff);
-  --color-cc-surface: var(--cc-surface, #f8fafc);
-  --color-cc-text: var(--cc-text, #0f172a);
-  --color-cc-text-muted: var(--cc-text-muted, #64748b);
-  --color-cc-border: var(--cc-border, #e2e8f0);
-  --radius-cc: var(--cc-radius, 0.5rem);
-  --font-cc: var(--cc-font-family, inherit);
+/* ── Custom property defaults (zero specificity via :where) ── */
+
+:where(#cc-container) {
+  --cc-primary: #2563eb;
+  --cc-primary-hover: #1d4ed8;
+  --cc-bg: #ffffff;
+  --cc-surface: #f8fafc;
+  --cc-text: #0f172a;
+  --cc-text-muted: #64748b;
+  --cc-border: #e2e8f0;
+  --cc-radius: 0.5rem;
+  --cc-font-family: inherit;
 }
 
 /* ── Banner ─────────────────────────────────────────────── */
@@ -21,14 +22,15 @@
   left: 0;
   right: 0;
   z-index: 9999;
-  background-color: var(--color-cc-bg);
-  border-top: 1px solid var(--color-cc-border);
-  font-family: var(--font-cc);
-  color: var(--color-cc-text);
+  background-color: var(--cc-bg);
+  border-top: 1px solid var(--cc-border);
+  font-family: var(--cc-font-family);
+  color: var(--cc-text);
   transform: translateY(100%);
   opacity: 0;
   transition: transform 0.3s ease, opacity 0.3s ease;
   pointer-events: none;
+  box-sizing: border-box;
 }
 
 .cc-banner.cc-visible {
@@ -45,6 +47,7 @@
   align-items: center;
   gap: 1.5rem;
   flex-wrap: wrap;
+  box-sizing: border-box;
 }
 
 .cc-banner-text {
@@ -53,7 +56,7 @@
   margin: 0;
   font-size: 0.875rem;
   line-height: 1.5;
-  color: var(--color-cc-text-muted);
+  color: var(--cc-text-muted);
 }
 
 .cc-banner-actions {
@@ -88,11 +91,12 @@
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  font-family: var(--font-cc);
-  color: var(--color-cc-text);
+  font-family: var(--cc-font-family);
+  color: var(--cc-text);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s ease;
+  box-sizing: border-box;
 }
 
 .cc-modal.cc-visible {
@@ -101,15 +105,16 @@
 }
 
 .cc-modal-inner {
-  background-color: var(--color-cc-bg);
-  border: 1px solid var(--color-cc-border);
-  border-radius: var(--radius-cc);
+  background-color: var(--cc-bg);
+  border: 1px solid var(--cc-border);
+  border-radius: var(--cc-radius);
   width: 100%;
   max-width: 32rem;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  box-sizing: border-box;
 }
 
 .cc-modal-header {
@@ -117,7 +122,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 1rem 1.5rem;
-  border-bottom: 1px solid var(--color-cc-border);
+  border-bottom: 1px solid var(--cc-border);
 }
 
 .cc-modal-title {
@@ -133,12 +138,12 @@
   font-size: 1.5rem;
   line-height: 1;
   cursor: pointer;
-  color: var(--color-cc-text-muted);
+  color: var(--cc-text-muted);
   padding: 0.25rem;
 }
 
 .cc-modal-close:hover {
-  color: var(--color-cc-text);
+  color: var(--cc-text);
 }
 
 .cc-modal-body {
@@ -151,7 +156,7 @@
   display: flex;
   gap: 0.5rem;
   padding: 1rem 1.5rem;
-  border-top: 1px solid var(--color-cc-border);
+  border-top: 1px solid var(--cc-border);
   flex-wrap: wrap;
 }
 
@@ -159,7 +164,7 @@
 
 .cc-category {
   padding: 0.75rem 0;
-  border-bottom: 1px solid var(--color-cc-border);
+  border-bottom: 1px solid var(--cc-border);
 }
 
 .cc-category:last-child {
@@ -183,7 +188,7 @@
   margin: 0.25rem 0 0;
   font-size: 0.8125rem;
   line-height: 1.5;
-  color: var(--color-cc-text-muted);
+  color: var(--cc-text-muted);
 }
 
 /* ── Toggle Switch ──────────────────────────────────────── */
@@ -206,7 +211,7 @@
 .cc-toggle-slider {
   position: absolute;
   inset: 0;
-  background-color: var(--color-cc-border);
+  background-color: var(--cc-border);
   border-radius: 9999px;
   cursor: pointer;
   transition: background-color 0.2s ease;
@@ -222,10 +227,11 @@
   background-color: white;
   border-radius: 9999px;
   transition: transform 0.2s ease;
+  box-sizing: border-box;
 }
 
 .cc-toggle input:checked + .cc-toggle-slider {
-  background-color: var(--color-cc-primary);
+  background-color: var(--cc-primary);
 }
 
 .cc-toggle input:checked + .cc-toggle-slider::before {
@@ -246,45 +252,46 @@
   padding: 0.5rem 1rem;
   font-size: 0.875rem;
   font-weight: 500;
-  font-family: var(--font-cc);
+  font-family: var(--cc-font-family);
   line-height: 1.5;
-  border-radius: var(--radius-cc);
+  border-radius: var(--cc-radius);
   border: 1px solid transparent;
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .cc-btn-primary {
-  background-color: var(--color-cc-primary);
+  background-color: var(--cc-primary);
   color: white;
-  border-color: var(--color-cc-primary);
+  border-color: var(--cc-primary);
 }
 
 .cc-btn-primary:hover {
-  background-color: var(--color-cc-primary-hover);
-  border-color: var(--color-cc-primary-hover);
+  background-color: var(--cc-primary-hover);
+  border-color: var(--cc-primary-hover);
 }
 
 .cc-btn-secondary {
-  background-color: var(--color-cc-surface);
-  color: var(--color-cc-text);
-  border-color: var(--color-cc-border);
+  background-color: var(--cc-surface);
+  color: var(--cc-text);
+  border-color: var(--cc-border);
 }
 
 .cc-btn-secondary:hover {
-  background-color: var(--color-cc-border);
+  background-color: var(--cc-border);
 }
 
 .cc-btn-link {
   background: none;
-  color: var(--color-cc-text-muted);
+  color: var(--cc-text-muted);
   padding: 0.5rem 0.75rem;
   border: none;
 }
 
 .cc-btn-link:hover {
-  color: var(--color-cc-text);
+  color: var(--cc-text);
 }
 
 /* ── Focus styles ───────────────────────────────────────── */
@@ -292,6 +299,6 @@
 .cc-btn:focus-visible,
 .cc-modal-close:focus-visible,
 .cc-toggle input:focus-visible + .cc-toggle-slider {
-  outline: 2px solid var(--color-cc-primary);
+  outline: 2px solid var(--cc-primary);
   outline-offset: 2px;
 }

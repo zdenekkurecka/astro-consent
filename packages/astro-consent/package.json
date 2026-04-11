@@ -11,18 +11,14 @@
     "dist"
   ],
   "scripts": {
-    "build:css": "tailwindcss -i src/styles/input.css -o dist/styles/base.css --minify",
-    "build:ts": "tsc",
-    "build": "pnpm run build:ts && pnpm run build:css"
+    "build": "tsc && mkdir -p dist/styles && cp src/styles/base.css dist/styles/base.css"
   },
   "peerDependencies": {
     "astro": "^5.0.0 || ^6.0.0"
   },
   "devDependencies": {
-    "@tailwindcss/cli": "^4.0.0",
     "@types/node": "^25.6.0",
     "astro": "^6.0.0",
-    "tailwindcss": "^4.0.0",
     "typescript": "^5.8.0"
   },
   "publishConfig": {
