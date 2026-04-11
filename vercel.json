@@ -1,0 +1,6 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "pnpm --filter @zdenekkurecka/astro-consent build && pnpm --filter playground build",
+  "outputDirectory": "playground/dist",
+  "installCommand": "pnpm install"
+}
