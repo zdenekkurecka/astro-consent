@@ -1,0 +1,297 @@
+@import "tailwindcss";
+@source "../ui.ts";
+
+@theme {
+  --color-cc-primary: var(--cc-primary, #2563eb);
+  --color-cc-primary-hover: var(--cc-primary-hover, #1d4ed8);
+  --color-cc-bg: var(--cc-bg, #ffffff);
+  --color-cc-surface: var(--cc-surface, #f8fafc);
+  --color-cc-text: var(--cc-text, #0f172a);
+  --color-cc-text-muted: var(--cc-text-muted, #64748b);
+  --color-cc-border: var(--cc-border, #e2e8f0);
+  --radius-cc: var(--cc-radius, 0.5rem);
+  --font-cc: var(--cc-font-family, inherit);
+}
+
+/* ── Banner ─────────────────────────────────────────────── */
+
+.cc-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  background-color: var(--color-cc-bg);
+  border-top: 1px solid var(--color-cc-border);
+  font-family: var(--font-cc);
+  color: var(--color-cc-text);
+  transform: translateY(100%);
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.cc-banner.cc-visible {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.cc-banner-inner {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 1rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.cc-banner-text {
+  flex: 1 1 0%;
+  min-width: 280px;
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--color-cc-text-muted);
+}
+
+.cc-banner-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+/* ── Modal ──────────────────────────────────────────────── */
+
+.cc-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background-color: rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.cc-overlay.cc-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.cc-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  font-family: var(--font-cc);
+  color: var(--color-cc-text);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.cc-modal.cc-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.cc-modal-inner {
+  background-color: var(--color-cc-bg);
+  border: 1px solid var(--color-cc-border);
+  border-radius: var(--radius-cc);
+  width: 100%;
+  max-width: 32rem;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+.cc-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--color-cc-border);
+}
+
+.cc-modal-title {
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.cc-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  color: var(--color-cc-text-muted);
+  padding: 0.25rem;
+}
+
+.cc-modal-close:hover {
+  color: var(--color-cc-text);
+}
+
+.cc-modal-body {
+  padding: 1rem 1.5rem;
+  overflow-y: auto;
+  flex: 1 1 auto;
+}
+
+.cc-modal-footer {
+  display: flex;
+  gap: 0.5rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--color-cc-border);
+  flex-wrap: wrap;
+}
+
+/* ── Categories ─────────────────────────────────────────── */
+
+.cc-category {
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--color-cc-border);
+}
+
+.cc-category:last-child {
+  border-bottom: none;
+}
+
+.cc-category-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.cc-category-label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.cc-category-description {
+  margin: 0.25rem 0 0;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--color-cc-text-muted);
+}
+
+/* ── Toggle Switch ──────────────────────────────────────── */
+
+.cc-toggle {
+  position: relative;
+  display: inline-block;
+  width: 2.75rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+}
+
+.cc-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.cc-toggle-slider {
+  position: absolute;
+  inset: 0;
+  background-color: var(--color-cc-border);
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.cc-toggle-slider::before {
+  content: '';
+  position: absolute;
+  height: 1.125rem;
+  width: 1.125rem;
+  left: 0.1875rem;
+  bottom: 0.1875rem;
+  background-color: white;
+  border-radius: 9999px;
+  transition: transform 0.2s ease;
+}
+
+.cc-toggle input:checked + .cc-toggle-slider {
+  background-color: var(--color-cc-primary);
+}
+
+.cc-toggle input:checked + .cc-toggle-slider::before {
+  transform: translateX(1.25rem);
+}
+
+.cc-toggle input:disabled + .cc-toggle-slider {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ── Buttons ────────────────────────────────────────────── */
+
+.cc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  font-family: var(--font-cc);
+  line-height: 1.5;
+  border-radius: var(--radius-cc);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+}
+
+.cc-btn-primary {
+  background-color: var(--color-cc-primary);
+  color: white;
+  border-color: var(--color-cc-primary);
+}
+
+.cc-btn-primary:hover {
+  background-color: var(--color-cc-primary-hover);
+  border-color: var(--color-cc-primary-hover);
+}
+
+.cc-btn-secondary {
+  background-color: var(--color-cc-surface);
+  color: var(--color-cc-text);
+  border-color: var(--color-cc-border);
+}
+
+.cc-btn-secondary:hover {
+  background-color: var(--color-cc-border);
+}
+
+.cc-btn-link {
+  background: none;
+  color: var(--color-cc-text-muted);
+  padding: 0.5rem 0.75rem;
+  border: none;
+}
+
+.cc-btn-link:hover {
+  color: var(--color-cc-text);
+}
+
+/* ── Focus styles ───────────────────────────────────────── */
+
+.cc-btn:focus-visible,
+.cc-modal-close:focus-visible,
+.cc-toggle input:focus-visible + .cc-toggle-slider {
+  outline: 2px solid var(--color-cc-primary);
+  outline-offset: 2px;
+}

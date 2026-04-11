@@ -1,0 +1,31 @@
+{
+  "name": "@zdenekkurecka/astro-consent",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./dist/index.js",
+    "./styles": "./dist/styles/base.css"
+  },
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build:css": "tailwindcss -i src/styles/input.css -o dist/styles/base.css --minify",
+    "build:ts": "tsc",
+    "build": "pnpm run build:ts && pnpm run build:css"
+  },
+  "peerDependencies": {
+    "astro": "^5.0.0 || ^6.0.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.0.0",
+    "@types/node": "^25.6.0",
+    "astro": "^6.0.0",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5.8.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

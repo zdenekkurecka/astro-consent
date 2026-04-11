@@ -1,0 +1,54 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Cookie Consent Playground">
+  <h1>Cookie Consent Playground</h1>
+  <p>
+    This page demonstrates the <code>@zdenekkurecka/astro-consent</code> integration.
+    The consent banner should appear on first visit.
+  </p>
+
+  <h2>Runtime API Controls</h2>
+  <div class="controls">
+    <button id="btn-show">Show Banner</button>
+    <button id="btn-prefs">Show Preferences</button>
+    <button id="btn-reset">Reset Consent</button>
+    <button id="btn-get">Get State</button>
+  </div>
+
+  <h2>Current State</h2>
+  <pre id="state">No consent data yet.</pre>
+
+  <script>
+    function refreshState() {
+      const el = document.getElementById('state');
+      const consent = (window as any).zdenekkureckaConsent;
+      if (el && consent) {
+        const state = consent.get();
+        el.textContent = state ? JSON.stringify(state, null, 2) : 'No consent data yet.';
+      }
+    }
+
+    document.addEventListener('astro:page-load', () => {
+      refreshState();
+
+      document.getElementById('btn-show')?.addEventListener('click', () => {
+        (window as any).zdenekkureckaConsent?.show();
+      });
+
+      document.getElementById('btn-prefs')?.addEventListener('click', () => {
+        (window as any).zdenekkureckaConsent?.showPreferences();
+      });
+
+      document.getElementById('btn-reset')?.addEventListener('click', () => {
+        (window as any).zdenekkureckaConsent?.reset();
+        refreshState();
+      });
+
+      document.getElementById('btn-get')?.addEventListener('click', () => {
+        refreshState();
+      });
+    });
+  </script>
+</Layout>
