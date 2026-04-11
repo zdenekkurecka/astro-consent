@@ -2,7 +2,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "pnpm --filter playground dev",
+    "dev": "pnpm --filter @zdenekkurecka/astro-consent build && pnpm --filter playground dev",
     "build": "pnpm --filter @zdenekkurecka/astro-consent build && pnpm --filter playground build",
     "build:all": "pnpm -r build"
   },
