@@ -276,7 +276,7 @@ The styles use CSS custom properties, so you can theme them from your own
 stylesheet without forking anything:
 
 ```css
-:where(#cc-container) {
+:root {
   --cc-primary: #7c3aed;
   --cc-primary-hover: #6d28d9;
   --cc-radius: 0.75rem;
