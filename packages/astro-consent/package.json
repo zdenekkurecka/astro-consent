@@ -26,6 +26,12 @@
     "directory": "packages/astro-consent"
   },
   "type": "module",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "engines": {
+    "node": ">=18.17.0"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
