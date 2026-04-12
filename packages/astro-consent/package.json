@@ -1,7 +1,7 @@
 {
   "name": "@zdenekkurecka/astro-consent",
-  "version": "0.1.0",
-  "description": "Astro integration for GDPR/ePrivacy-friendly cookie consent: banner, preferences modal, runtime API and category-based consent state.",
+  "version": "0.1.1",
+  "description": "Astro integration for GDPR/ePrivacy-friendly cookie consent: banner, preferences modal, runtime API, category-based consent state, strict-CSP safe, works with or without View Transitions.",
   "keywords": [
     "astro",
     "astro-integration",
