@@ -17,12 +17,6 @@ export default defineConfig({
           default: false,
         },
       },
-      onConsent: (state) => {
-        console.log('[playground] Consent given:', state);
-      },
-      onChange: (state) => {
-        console.log('[playground] Consent changed:', state);
-      },
     }),
   ],
 });

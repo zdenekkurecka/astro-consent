@@ -1,4 +1,5 @@
 import type { ConsentState, SerializableConsentConfig, ConsentAPI } from './types.js';
+import { CONSENT_EVENT, CHANGE_EVENT } from './types.js';
 import {
   readConsent,
   writeConsent,
@@ -14,53 +15,43 @@ import {
   hideBanner,
   showModal,
   hideModal,
+  isModalVisible,
   getModalSelections,
   updateModalToggles,
+  handleModalTabTrap,
 } from './ui.js';
-
-interface ConsentCallbacks {
-  onConsent?: (state: ConsentState) => void;
-  onChange?: (state: ConsentState) => void;
-}
 
 let listenerAttached = false;
 let consentFiredThisSession = false;
 
-function fireCallback(
-  callbacks: ConsentCallbacks,
-  type: 'onConsent' | 'onChange',
-  state: ConsentState,
-): void {
-  const cb = callbacks[type];
-  if (cb) {
-    try {
-      cb(state);
-    } catch (e) {
-      console.error(`[astro-consent] ${type} callback error:`, e);
-    }
-  }
+/**
+ * Dispatches a consent event on `document`. Using events (instead of
+ * functions serialized through the Astro config) avoids the closure problem:
+ * subscribers in user-land `<script>` tags can import modules, call closures,
+ * and reference outer scope — none of which works when a callback is
+ * serialized with `Function.prototype.toString`.
+ */
+function emit(type: typeof CONSENT_EVENT | typeof CHANGE_EVENT, state: ConsentState): void {
+  document.dispatchEvent(new CustomEvent(type, { detail: state }));
 }
 
-export function initConsentManager(
-  config: SerializableConsentConfig,
-  callbacks: ConsentCallbacks,
-): void {
-  // Inject banner + modal DOM (idempotent)
+export function initConsentManager(config: SerializableConsentConfig): void {
+  // Inject banner + modal DOM (idempotent).
   injectUI(config);
 
-  // Check consent state
+  // Check consent state.
   if (needsConsent(config.version)) {
     showBanner();
   } else if (!consentFiredThisSession) {
-    // Fire onConsent once per session (not on every SPA navigation)
+    // Fire the consent event once per session (not on every SPA navigation).
     consentFiredThisSession = true;
     const existing = readConsent();
     if (existing) {
-      fireCallback(callbacks, 'onConsent', existing);
+      emit(CONSENT_EVENT, existing);
     }
   }
 
-  // Attach event delegation (once per page lifecycle)
+  // Attach event delegation (once per page lifecycle).
   if (!listenerAttached) {
     listenerAttached = true;
 
@@ -78,7 +69,7 @@ export function initConsentManager(
           hideBanner();
           hideModal();
           consentFiredThisSession = true;
-          fireCallback(callbacks, 'onConsent', state);
+          emit(CONSENT_EVENT, state);
           break;
         }
 
@@ -89,18 +80,18 @@ export function initConsentManager(
           hideBanner();
           hideModal();
           consentFiredThisSession = true;
-          fireCallback(callbacks, 'onConsent', state);
+          emit(CONSENT_EVENT, state);
           break;
         }
 
         case 'manage': {
           hideBanner();
-          // Sync toggles with current state or defaults
+          // Sync toggles with current state or defaults.
           const current = readConsent();
           if (current) {
             updateModalToggles(current.categories);
           } else {
-            // After reset: show defaults from config
+            // After reset: show defaults from config.
             const defaults: Record<string, boolean> = {};
             for (const [key, cat] of Object.entries(config.categories)) {
               defaults[key] = cat.default;
@@ -118,13 +109,13 @@ export function initConsentManager(
           writeConsent(state);
           hideModal();
           consentFiredThisSession = true;
-          fireCallback(callbacks, isUpdate ? 'onChange' : 'onConsent', state);
+          emit(isUpdate ? CHANGE_EVENT : CONSENT_EVENT, state);
           break;
         }
 
         case 'close-modal': {
           hideModal();
-          // Re-show banner if consent hasn't been given yet
+          // Re-show banner if consent hasn't been given yet.
           if (needsConsent(config.version)) {
             showBanner();
           }
@@ -133,7 +124,7 @@ export function initConsentManager(
       }
     });
 
-    // Close modal on overlay click
+    // Close modal on overlay click.
     document.addEventListener('click', (e) => {
       if ((e.target as HTMLElement).id === 'cc-overlay') {
         hideModal();
@@ -143,21 +134,23 @@ export function initConsentManager(
       }
     });
 
-    // Close modal on Escape key
+    // Keyboard handling: Escape to close, Tab trapped inside modal.
     document.addEventListener('keydown', (e) => {
+      if (!isModalVisible()) return;
+
       if (e.key === 'Escape') {
-        const modal = document.getElementById('cc-modal');
-        if (modal?.classList.contains('cc-visible')) {
-          hideModal();
-          if (needsConsent(config.version)) {
-            showBanner();
-          }
+        hideModal();
+        if (needsConsent(config.version)) {
+          showBanner();
         }
+        return;
       }
+
+      handleModalTabTrap(e);
     });
   }
 
-  // Expose runtime API
+  // Expose runtime API.
   const api: ConsentAPI = {
     get: () => readConsent(),
     set: (categories) => {
@@ -175,7 +168,7 @@ export function initConsentManager(
         categories: merged,
       };
       writeConsent(state);
-      fireCallback(callbacks, 'onChange', state);
+      emit(CHANGE_EVENT, state);
     },
     reset: () => {
       clearConsent();
@@ -203,5 +196,5 @@ export function initConsentManager(
     },
   };
 
-  (window as unknown as Record<string, unknown>).zdenekkureckaConsent = api;
+  window.zdenekkureckaConsent = api;
 }
