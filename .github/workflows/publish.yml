@@ -1,19 +1,37 @@
 name: Publish @zdenekkurecka/astro-consent
 
-# Publishes the package to npm.
+# Publishes the package to npm using npm Trusted Publishing (OIDC).
 #
-# Triggers:
-#   - push of a tag matching `astro-consent-v*` (e.g. `astro-consent-v0.1.0`)
+# No long-lived credentials are stored anywhere. At publish time, GitHub
+# issues a short-lived OIDC token, the npm CLI exchanges it for a one-shot
+# registry credential, and the tarball is published with a provenance
+# attestation so the npm page shows "Built and signed on GitHub Actions".
+#
+# ─── One-time setup on npmjs.com ─────────────────────────────────────────
+#
+# 1. Publish 0.1.0 manually once to create the package on npm (see README).
+#    After the package exists, anyone with owner access to it can configure
+#    a trusted publisher.
+#
+# 2. https://www.npmjs.com/package/@zdenekkurecka/astro-consent/access
+#    → "Trusted Publisher" → "Add trusted publisher" → GitHub Actions
+#
+#    Fill in:
+#      Organization or user:  zdenekkurecka
+#      Repository:            astro-consent
+#      Workflow filename:     publish.yml        ← must match this file
+#      Environment:           (leave empty unless you add one below)
+#
+#    Save. npm will now accept OIDC publishes from runs of this workflow
+#    on this repo.
+#
+# No repo secrets are needed. If you see `ENEEDAUTH` or `E401` on publish,
+# the most common cause is a mismatch between the values above and the
+# actual workflow that ran (branch, filename, repo name).
+#
+# ─── Triggers ─────────────────────────────────────────────────────────────
+#   - push of a tag matching `astro-consent-v*` (e.g. `astro-consent-v0.1.1`)
 #   - manual run from the Actions tab (useful for re-runs / dry-runs)
-#
-# Required repo secret: NPM_TOKEN
-#   1. https://www.npmjs.com/settings/<you>/tokens → Generate New Token →
-#      Classic → type: Automation (bypasses 2FA, which is what CI needs)
-#   2. GitHub repo → Settings → Secrets and variables → Actions →
-#      New repository secret → name: NPM_TOKEN
-#
-# The `id-token: write` permission is here for a future upgrade to npm
-# trusted publishing / provenance; today's workflow does not use it.
 
 on:
   push:
@@ -22,10 +40,13 @@ on:
   workflow_dispatch:
     inputs:
       dry-run:
-        description: 'Run without actually publishing (pnpm publish --dry-run)'
+        description: 'Run without actually publishing (npm publish --dry-run)'
         type: boolean
         default: false
 
+# Minimum permissions for OIDC trusted publishing:
+#   - id-token: write → lets the runner request an OIDC token for npm to verify
+#   - contents: read  → needed by actions/checkout
 permissions:
   contents: read
   id-token: write
@@ -48,11 +69,14 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
-          # registry-url writes an .npmrc that authenticates with
-          # NODE_AUTH_TOKEN against the public npm registry. Without this
-          # the NPM_TOKEN secret would be ignored.
+          # npm Trusted Publishing + provenance requires a reasonably recent
+          # npm CLI (>= 11.5.1). Node 22 ships npm 10.x, so we upgrade npm
+          # explicitly below.
+          node-version: 22
           registry-url: 'https://registry.npmjs.org'
+
+      - name: Upgrade npm to a version with Trusted Publishing support
+        run: npm install --global npm@latest
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -78,14 +102,12 @@ jobs:
       - name: Smoke-test integration via playground build
         run: pnpm --filter playground build
 
-      - name: Publish to npm
+      - name: Publish to npm (with provenance)
         working-directory: packages/astro-consent
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           if [ "${{ github.event.inputs.dry-run }}" = "true" ]; then
             echo "Dry run — not publishing"
-            pnpm publish --dry-run --no-git-checks
+            npm publish --dry-run --provenance --access public
           else
-            pnpm publish --no-git-checks
+            npm publish --provenance --access public
           fi
