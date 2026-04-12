@@ -6,6 +6,7 @@ export default function cookieConsent(userConfig: ConsentConfig): AstroIntegrati
   const serializableConfig: SerializableConsentConfig = {
     version: userConfig.version,
     categories: userConfig.categories,
+    cookiePolicy: userConfig.cookiePolicy,
   };
 
   return {

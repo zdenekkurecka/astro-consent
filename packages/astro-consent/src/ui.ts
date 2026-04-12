@@ -17,13 +17,38 @@ function escapeHtml(str: string): string {
     .replace(/'/g, '&#39;');
 }
 
-function createBannerHTML(): string {
+/**
+ * Only allow http(s) absolute URLs or same-origin paths — blocks
+ * `javascript:` and other dangerous schemes that could execute on click.
+ */
+function sanitizeUrl(url: string): string | null {
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  if (trimmed.startsWith('/') || trimmed.startsWith('#') || trimmed.startsWith('?')) return trimmed;
+  return null;
+}
+
+function createPolicyLinkHTML(
+  cookiePolicy: SerializableConsentConfig['cookiePolicy'],
+  className: string,
+): string {
+  if (!cookiePolicy) return '';
+  const safeUrl = sanitizeUrl(cookiePolicy.url);
+  if (!safeUrl) return '';
+  const label = cookiePolicy.label ?? 'Cookie Policy';
+  return `<a class="${className}" href="${escapeHtml(safeUrl)}" data-cc="policy-link">${escapeHtml(label)}</a>`;
+}
+
+function createBannerHTML(config: SerializableConsentConfig): string {
+  const policyLink = createPolicyLinkHTML(config.cookiePolicy, 'cc-policy-link');
   return `
     <div class="cc-banner" id="${BANNER_ID}" role="region" aria-label="Cookie consent">
       <div class="cc-banner-inner">
         <p class="cc-banner-text">
           We use cookies to enhance your browsing experience, serve personalized content, and analyze our traffic.
           Please choose your cookie preferences.
+          ${policyLink}
         </p>
         <div class="cc-banner-actions">
           <button type="button" class="cc-btn cc-btn-primary" data-cc="accept-all">Accept all</button>
@@ -72,6 +97,8 @@ function createModalHTML(config: SerializableConsentConfig): string {
     .map(([key, cat]) => createCategoryToggle(key, cat.label, cat.description, false, cat.default))
     .join('');
 
+  const policyLink = createPolicyLinkHTML(config.cookiePolicy, 'cc-policy-link cc-modal-policy-link');
+
   return `
     <div class="cc-overlay" id="${OVERLAY_ID}" aria-hidden="true"></div>
     <div
@@ -91,6 +118,7 @@ function createModalHTML(config: SerializableConsentConfig): string {
         <div class="cc-modal-body">
           ${essentialToggle}
           ${categoryToggles}
+          ${policyLink}
         </div>
         <div class="cc-modal-footer">
           <button type="button" class="cc-btn cc-btn-primary" data-cc="modal-accept-all">Accept all</button>
@@ -106,7 +134,7 @@ export function injectUI(config: SerializableConsentConfig): void {
 
   const container = document.createElement('div');
   container.id = CONTAINER_ID;
-  container.innerHTML = createBannerHTML() + createModalHTML(config);
+  container.innerHTML = createBannerHTML(config) + createModalHTML(config);
   document.body.appendChild(container);
 }
 

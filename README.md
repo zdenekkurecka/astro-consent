@@ -63,6 +63,7 @@ they force you to serialize your tracker callbacks into a JSON config.
   declare), plus an always-on implicit `essential` category
 - **Versioned consent** — bump a number to re-prompt every user
 - **Typed** config, runtime API, and `document` event map
+- **Optional cookie policy link** surfaced in both banner and preferences modal
 - **Accessible modal**: `role="dialog"` / `aria-modal`, focus trap, focus
   restoration, `Escape` to close, click-outside to dismiss
 - **Strict-CSP safe**: no inline `<script>`, no inline `<style>`
@@ -136,7 +137,38 @@ interface ConsentConfig {
     description: string;
     default: boolean;
   }>;
+
+  /**
+   * Optional link to your cookie / privacy policy. When provided, a small
+   * link is rendered inside the banner and inside the preferences modal.
+   * Only `http(s)://` URLs and same-origin paths (`/…`, `#…`, `?…`) are
+   * accepted — other schemes (e.g. `javascript:`) are ignored.
+   */
+  cookiePolicy?: {
+    url: string;
+    /** Defaults to `"Cookie Policy"`. */
+    label?: string;
+  };
 }
+```
+
+Example with a cookie policy link:
+
+```js
+cookieConsent({
+  version: 1,
+  cookiePolicy: {
+    url: '/legal/cookies',
+    label: 'Cookie Policy',
+  },
+  categories: {
+    analytics: {
+      label: 'Analytics',
+      description: 'Help us understand how visitors use the site.',
+      default: false,
+    },
+  },
+});
 ```
 
 Under the hood, the integration:
