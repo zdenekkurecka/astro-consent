@@ -5,7 +5,10 @@ banner, a preferences modal, a small runtime API, and category-based consent
 state persisted in `localStorage`.
 
 - Zero-dependency runtime
-- Works with Astro's View Transitions / SPA routing (`astro:page-load`)
+- Works on standard Astro sites **and** with View Transitions / SPA routing —
+  the runtime initializes on `DOMContentLoaded` (or immediately if the DOM is
+  already parsed) and re-runs on `astro:page-load` when `<ClientRouter />` is
+  active
 - Versioned consent — bump `version` to re-prompt users
 - Typed config, runtime API, and typed `document` event map
 - Accessible modal — `role="dialog"` / `aria-modal`, focus trap, focus
@@ -71,6 +74,12 @@ The integration:
 3. Injects the stylesheet via `injectScript('page-ssr', ...)` which routes
    the CSS through Astro's normal CSS pipeline, emitting a hashed
    `<link rel="stylesheet">` — never inline.
+
+The injected runtime bootstraps itself on `DOMContentLoaded` (or synchronously
+if the document is already parsed) **and** on `astro:page-load`, so it works
+identically on plain Astro sites and on sites using `<ClientRouter />` for
+View Transitions. Initialization is idempotent, so subsequent SPA navigations
+only re-attach per-page state.
 
 ### Reacting to consent changes
 
