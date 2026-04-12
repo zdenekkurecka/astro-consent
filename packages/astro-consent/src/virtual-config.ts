@@ -1,5 +1,3 @@
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
 import type { SerializableConsentConfig } from './types.js';
 
 interface VitePlugin {
@@ -13,14 +11,13 @@ const VIRTUAL_INIT = 'virtual:astro-consent/init';
 const RESOLVED_CONFIG = '\0' + VIRTUAL_CONFIG;
 const RESOLVED_INIT = '\0' + VIRTUAL_INIT;
 
-function normalizePath(p: string): string {
-  return p.replace(/\\/g, '/');
-}
+// Import the client via the package's own bare specifier so Vite resolves it
+// through normal package resolution. This keeps the virtual module
+// cross-platform (no absolute filesystem paths embedded as import strings)
+// and decoupled from the on-disk dist/ layout.
+const CLIENT_SPECIFIER = '@zdenekkurecka/astro-consent/client';
 
 export function vitePluginConsentConfig(config: SerializableConsentConfig): VitePlugin {
-  // Resolve paths relative to this file's location in dist/
-  const thisDir = dirname(fileURLToPath(import.meta.url));
-  const clientPath = normalizePath(resolve(thisDir, 'client.js'));
   return {
     name: 'vite-plugin-astro-consent',
 
@@ -37,7 +34,7 @@ export function vitePluginConsentConfig(config: SerializableConsentConfig): Vite
       if (id === RESOLVED_INIT) {
         return [
           `import config from '${VIRTUAL_CONFIG}';`,
-          `import { initConsentManager } from '${clientPath}';`,
+          `import { initConsentManager } from '${CLIENT_SPECIFIER}';`,
           ``,
           `const callbacks = typeof window !== 'undefined' ? (window.__astroConsentCallbacks || {}) : {};`,
           ``,

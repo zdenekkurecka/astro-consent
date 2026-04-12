@@ -1,18 +1,55 @@
 {
   "name": "@zdenekkurecka/astro-consent",
   "version": "0.1.0",
+  "description": "Astro integration for GDPR/ePrivacy-friendly cookie consent: banner, preferences modal, runtime API and category-based consent state.",
+  "keywords": [
+    "astro",
+    "astro-integration",
+    "astro-component",
+    "cookie-consent",
+    "consent",
+    "gdpr",
+    "eprivacy",
+    "cookies",
+    "privacy",
+    "withastro"
+  ],
+  "author": "zdenekkurecka",
+  "license": "MIT",
+  "homepage": "https://github.com/zdenekkurecka/astro-consent#readme",
+  "bugs": {
+    "url": "https://github.com/zdenekkurecka/astro-consent/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zdenekkurecka/astro-consent.git",
+    "directory": "packages/astro-consent"
+  },
   "type": "module",
   "exports": {
-    ".": "./dist/index.js",
-    "./styles": "./dist/styles/base.css"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
+    },
+    "./styles": "./dist/styles/base.css",
+    "./styles/base.css": "./dist/styles/base.css",
+    "./package.json": "./package.json"
   },
   "types": "./dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "scripts": {
-    "build": "tsc && mkdir -p dist/styles && cp src/styles/base.css dist/styles/base.css",
-    "dev": "tsc --watch"
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "build": "pnpm run clean && tsc -p tsconfig.build.json && node scripts/copy-assets.mjs",
+    "dev": "tsc -p tsconfig.build.json --watch",
+    "prepublishOnly": "pnpm run build"
   },
   "peerDependencies": {
     "astro": "^5.0.0 || ^6.0.0"
