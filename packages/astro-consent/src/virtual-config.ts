@@ -41,7 +41,18 @@ export function vitePluginConsentConfig(config: SerializableConsentConfig): Vite
           `  initConsentManager(config);`,
           `}`,
           ``,
+          `// Fires on every View Transitions navigation (and initial load when VT is enabled).`,
           `document.addEventListener('astro:page-load', init);`,
+          ``,
+          `// Fallback for sites without View Transitions: astro:page-load never fires there,`,
+          `// so we also listen for DOMContentLoaded (or run immediately if the DOM is already`,
+          `// ready). initConsentManager is idempotent (listenerAttached / consentFiredThisSession`,
+          `// guards in client.ts), so double-firing on VT-enabled sites is safe.`,
+          `if (document.readyState === 'loading') {`,
+          `  document.addEventListener('DOMContentLoaded', init, { once: true });`,
+          `} else {`,
+          `  init();`,
+          `}`,
         ].join('\n');
       }
     },
