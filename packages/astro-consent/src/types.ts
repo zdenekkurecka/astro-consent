@@ -4,9 +4,15 @@ export interface ConsentCategory {
   default: boolean;
 }
 
+export interface CookiePolicyLink {
+  url: string;
+  label?: string;
+}
+
 export interface ConsentConfig {
   version: number;
   categories: Record<string, ConsentCategory>;
+  cookiePolicy?: CookiePolicyLink;
 }
 
 export interface ConsentState {
@@ -18,6 +24,7 @@ export interface ConsentState {
 export interface SerializableConsentConfig {
   version: number;
   categories: Record<string, ConsentCategory>;
+  cookiePolicy?: CookiePolicyLink;
 }
 
 export interface ConsentAPI {

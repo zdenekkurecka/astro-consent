@@ -5,6 +5,10 @@ export default defineConfig({
   integrations: [
     cookieConsent({
       version: 1,
+      cookiePolicy: {
+        url: '/cookie-policy',
+        label: 'Cookie Policy',
+      },
       categories: {
         analytics: {
           label: 'Analytics',

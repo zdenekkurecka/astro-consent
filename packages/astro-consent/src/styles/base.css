@@ -294,10 +294,34 @@
   color: var(--cc-text);
 }
 
+/* ── Policy link ────────────────────────────────────────── */
+
+.cc-policy-link {
+  display: inline-block;
+  font-size: 0.8125rem;
+  color: var(--cc-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.cc-policy-link:hover {
+  color: var(--cc-primary-hover);
+}
+
+.cc-modal-policy-link {
+  margin-top: 0.75rem;
+  color: var(--cc-text-muted);
+}
+
+.cc-modal-policy-link:hover {
+  color: var(--cc-text);
+}
+
 /* ── Focus styles ───────────────────────────────────────── */
 
 .cc-btn:focus-visible,
 .cc-modal-close:focus-visible,
+.cc-policy-link:focus-visible,
 .cc-toggle input:focus-visible + .cc-toggle-slider {
   outline: 2px solid var(--cc-primary);
   outline-offset: 2px;
