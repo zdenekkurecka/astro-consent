@@ -1,0 +1,26 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="About — Cookie Consent Playground">
+  <h1>About</h1>
+  <p>
+    This is a second page to test SPA navigation via <code>&lt;ClientRouter /&gt;</code>.
+    Navigate between pages to verify that consent state persists and the banner does not
+    re-appear after consent has been given.
+  </p>
+
+  <h2>Current State</h2>
+  <pre id="state">Loading...</pre>
+
+  <script>
+    document.addEventListener('astro:page-load', () => {
+      const el = document.getElementById('state');
+      const consent = (window as any).zdenekkureckaConsent;
+      if (el && consent) {
+        const state = consent.get();
+        el.textContent = state ? JSON.stringify(state, null, 2) : 'No consent data yet.';
+      }
+    });
+  </script>
+</Layout>

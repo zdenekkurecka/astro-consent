@@ -1,0 +1,66 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Cookie Consent Playground">
+  <h1>Cookie Consent Playground</h1>
+  <p>
+    This page demonstrates the <code>@zdenekkurecka/astro-consent</code> integration.
+    The consent banner should appear on first visit.
+  </p>
+
+  <h2>Runtime API Controls</h2>
+  <div class="controls">
+    <button id="btn-show">Show Banner</button>
+    <button id="btn-prefs">Show Preferences</button>
+    <button id="btn-reset">Reset Consent</button>
+    <button id="btn-get">Get State</button>
+  </div>
+
+  <h2>Current State</h2>
+  <pre id="state">No consent data yet.</pre>
+
+  <script>
+    function refreshState() {
+      const el = document.getElementById('state');
+      const consent = window.zdenekkureckaConsent;
+      if (el && consent) {
+        const state = consent.get();
+        el.textContent = state ? JSON.stringify(state, null, 2) : 'No consent data yet.';
+      }
+    }
+
+    // Subscribe to consent events. Unlike `.toString()`-serialized callbacks,
+    // these listeners run in the page's normal module scope and can close
+    // over imports, outer variables, etc.
+    document.addEventListener('astro-consent:consent', (e) => {
+      console.log('[playground] Consent given:', e.detail);
+      refreshState();
+    });
+    document.addEventListener('astro-consent:change', (e) => {
+      console.log('[playground] Consent changed:', e.detail);
+      refreshState();
+    });
+
+    document.addEventListener('astro:page-load', () => {
+      refreshState();
+
+      document.getElementById('btn-show')?.addEventListener('click', () => {
+        window.zdenekkureckaConsent?.show();
+      });
+
+      document.getElementById('btn-prefs')?.addEventListener('click', () => {
+        window.zdenekkureckaConsent?.showPreferences();
+      });
+
+      document.getElementById('btn-reset')?.addEventListener('click', () => {
+        window.zdenekkureckaConsent?.reset();
+        refreshState();
+      });
+
+      document.getElementById('btn-get')?.addEventListener('click', () => {
+        refreshState();
+      });
+    });
+  </script>
+</Layout>
