@@ -1,6 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import { dirname, resolve } from 'node:path';
 import type { AstroIntegration } from 'astro';
 import type { ConsentConfig, SerializableConsentConfig } from './types.js';
 import { vitePluginConsentConfig } from './virtual-config.js';
@@ -17,36 +14,25 @@ export default function cookieConsent(userConfig: ConsentConfig): AstroIntegrati
       'astro:config:setup': ({ updateConfig, injectScript, logger }) => {
         logger.info('Setting up cookie consent...');
 
-        // 1. Register Vite plugin for virtual modules (config + init entry)
+        // Register the Vite plugin that backs the virtual init module.
         updateConfig({
           vite: {
             plugins: [vitePluginConsentConfig(serializableConfig)],
           },
         });
 
-        // 2. Inject compiled CSS as inline <style> in <head>
-        const thisDir = dirname(fileURLToPath(import.meta.url));
-        const cssPath = resolve(thisDir, 'styles', 'base.css');
-        const css = readFileSync(cssPath, 'utf-8');
-        injectScript('head-inline', `if(!document.getElementById('cc-styles')){const s=document.createElement('style');s.id='cc-styles';s.textContent=${JSON.stringify(css)};document.head.appendChild(s)}`);
+        // Inject the CSS via `page-ssr` so it flows through Astro's normal
+        // CSS extraction pipeline and is emitted as a hashed
+        // <link rel="stylesheet"> in <head>. No inline <style>, CSP-safe.
+        injectScript(
+          'page-ssr',
+          'import "@zdenekkurecka/astro-consent/styles/base.css";',
+        );
 
-        // 3. Inject client-side init module on every page
+        // Inject the client runtime. `injectScript('page', ...)` compiles to
+        // a hashed <script type="module" src="..."> — not inline — so the
+        // integration also works under strict script-src CSP.
         injectScript('page', 'import "virtual:astro-consent/init";');
-
-        // 4. Inject callbacks via head-inline (runs before modules)
-        if (userConfig.onConsent || userConfig.onChange) {
-          const parts: string[] = [];
-          if (userConfig.onConsent) {
-            parts.push(`onConsent: ${userConfig.onConsent.toString()}`);
-          }
-          if (userConfig.onChange) {
-            parts.push(`onChange: ${userConfig.onChange.toString()}`);
-          }
-          injectScript(
-            'head-inline',
-            `window.__astroConsentCallbacks = { ${parts.join(', ')} };`,
-          );
-        }
       },
     },
   };

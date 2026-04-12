@@ -23,26 +23,38 @@ import Layout from '../layouts/Layout.astro';
   <script>
     function refreshState() {
       const el = document.getElementById('state');
-      const consent = (window as any).zdenekkureckaConsent;
+      const consent = window.zdenekkureckaConsent;
       if (el && consent) {
         const state = consent.get();
         el.textContent = state ? JSON.stringify(state, null, 2) : 'No consent data yet.';
       }
     }
 
+    // Subscribe to consent events. Unlike `.toString()`-serialized callbacks,
+    // these listeners run in the page's normal module scope and can close
+    // over imports, outer variables, etc.
+    document.addEventListener('astro-consent:consent', (e) => {
+      console.log('[playground] Consent given:', e.detail);
+      refreshState();
+    });
+    document.addEventListener('astro-consent:change', (e) => {
+      console.log('[playground] Consent changed:', e.detail);
+      refreshState();
+    });
+
     document.addEventListener('astro:page-load', () => {
       refreshState();
 
       document.getElementById('btn-show')?.addEventListener('click', () => {
-        (window as any).zdenekkureckaConsent?.show();
+        window.zdenekkureckaConsent?.show();
       });
 
       document.getElementById('btn-prefs')?.addEventListener('click', () => {
-        (window as any).zdenekkureckaConsent?.showPreferences();
+        window.zdenekkureckaConsent?.showPreferences();
       });
 
       document.getElementById('btn-reset')?.addEventListener('click', () => {
-        (window as any).zdenekkureckaConsent?.reset();
+        window.zdenekkureckaConsent?.reset();
         refreshState();
       });
 

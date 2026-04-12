@@ -14,7 +14,8 @@ const RESOLVED_INIT = '\0' + VIRTUAL_INIT;
 // Import the client via the package's own bare specifier so Vite resolves it
 // through normal package resolution. This keeps the virtual module
 // cross-platform (no absolute filesystem paths embedded as import strings)
-// and decoupled from the on-disk dist/ layout.
+// and decoupled from the on-disk dist/ layout. The CSS is injected
+// separately by the integration via `injectScript('page-ssr', ...)`.
 const CLIENT_SPECIFIER = '@zdenekkurecka/astro-consent/client';
 
 export function vitePluginConsentConfig(config: SerializableConsentConfig): VitePlugin {
@@ -36,10 +37,8 @@ export function vitePluginConsentConfig(config: SerializableConsentConfig): Vite
           `import config from '${VIRTUAL_CONFIG}';`,
           `import { initConsentManager } from '${CLIENT_SPECIFIER}';`,
           ``,
-          `const callbacks = typeof window !== 'undefined' ? (window.__astroConsentCallbacks || {}) : {};`,
-          ``,
           `function init() {`,
-          `  initConsentManager(config, callbacks);`,
+          `  initConsentManager(config);`,
           `}`,
           ``,
           `document.addEventListener('astro:page-load', init);`,
