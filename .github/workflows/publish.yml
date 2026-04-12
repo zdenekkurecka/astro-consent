@@ -1,0 +1,91 @@
+name: Publish @zdenekkurecka/astro-consent
+
+# Publishes the package to npm.
+#
+# Triggers:
+#   - push of a tag matching `astro-consent-v*` (e.g. `astro-consent-v0.1.0`)
+#   - manual run from the Actions tab (useful for re-runs / dry-runs)
+#
+# Required repo secret: NPM_TOKEN
+#   1. https://www.npmjs.com/settings/<you>/tokens → Generate New Token →
+#      Classic → type: Automation (bypasses 2FA, which is what CI needs)
+#   2. GitHub repo → Settings → Secrets and variables → Actions →
+#      New repository secret → name: NPM_TOKEN
+#
+# The `id-token: write` permission is here for a future upgrade to npm
+# trusted publishing / provenance; today's workflow does not use it.
+
+on:
+  push:
+    tags:
+      - 'astro-consent-v*'
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: 'Run without actually publishing (pnpm publish --dry-run)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Build, verify and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.8.1
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          # registry-url writes an .npmrc that authenticates with
+          # NODE_AUTH_TOKEN against the public npm registry. Without this
+          # the NPM_TOKEN secret would be ignored.
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build package
+        run: pnpm --filter @zdenekkurecka/astro-consent build
+
+      - name: Verify tag matches package.json version
+        if: startsWith(github.ref, 'refs/tags/astro-consent-v')
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#astro-consent-v}"
+          PKG_VERSION="$(node -p "require('./packages/astro-consent/package.json').version")"
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Tag version ($TAG_VERSION) does not match package.json version ($PKG_VERSION)"
+            exit 1
+          fi
+          echo "Tag matches package.json: $PKG_VERSION"
+
+      - name: Lint published package shape (publint)
+        working-directory: packages/astro-consent
+        run: pnpm dlx publint@latest
+
+      - name: Smoke-test integration via playground build
+        run: pnpm --filter playground build
+
+      - name: Publish to npm
+        working-directory: packages/astro-consent
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ "${{ github.event.inputs.dry-run }}" = "true" ]; then
+            echo "Dry run — not publishing"
+            pnpm publish --dry-run --no-git-checks
+          else
+            pnpm publish --no-git-checks
+          fi
