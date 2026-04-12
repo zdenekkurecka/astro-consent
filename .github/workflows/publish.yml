@@ -70,13 +70,14 @@ jobs:
         uses: actions/setup-node@v4
         with:
           # npm Trusted Publishing + provenance requires a reasonably recent
-          # npm CLI (>= 11.5.1). Node 22 ships npm 10.x, so we upgrade npm
-          # explicitly below.
-          node-version: 22
+          # npm CLI (>= 11.5.1). Node 24 (LTS "Krypton") ships with npm 11.x,
+          # so we get a compatible npm out of the box — no self-upgrade step
+          # needed. Upgrading npm in-place on Node 22 (which ships npm 10.x)
+          # is unreliable on GitHub Actions runners: the 10 → 11 self-upgrade
+          # can leave the running process with a half-replaced node_modules
+          # tree and fail with `Cannot find module 'promise-retry'`.
+          node-version: 24
           registry-url: 'https://registry.npmjs.org'
-
-      - name: Upgrade npm to a version with Trusted Publishing support
-        run: npm install --global npm@latest
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
