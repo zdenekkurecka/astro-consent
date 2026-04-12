@@ -9,6 +9,16 @@ import Layout from '../layouts/Layout.astro';
     The consent banner should appear on first visit.
   </p>
 
+  <h2>Theming</h2>
+  <p>
+    This playground overrides <code>--cc-primary</code> to orange from the
+    site's global stylesheet. Click <em>Show Banner</em> below to see it:
+  </p>
+  <pre>{`:root {
+  --cc-primary: #ea580c;
+  --cc-primary-hover: #c2410c;
+}`}</pre>
+
   <h2>Runtime API Controls</h2>
   <div class="controls">
     <button id="btn-show">Show Banner</button>

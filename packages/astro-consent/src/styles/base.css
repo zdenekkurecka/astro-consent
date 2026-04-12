@@ -2,7 +2,7 @@
 
 /* ── Custom property defaults (zero specificity via :where) ── */
 
-:where(#cc-container) {
+:where(:root) {
   --cc-primary: #2563eb;
   --cc-primary-hover: #1d4ed8;
   --cc-bg: #ffffff;

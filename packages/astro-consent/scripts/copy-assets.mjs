@@ -1,18 +1,25 @@
 // Cross-platform asset copy (replaces `mkdir -p && cp`, which is POSIX-only).
+//
+// We also mirror the repo-root README.md and LICENSE into the package
+// directory here. The repo root is the single source of truth for both
+// files; this script makes sure npm still ships them with the package
+// without requiring contributors to keep two copies in sync by hand.
 import { mkdirSync, copyFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const pkgRoot = resolve(here, '..');
+const repoRoot = resolve(pkgRoot, '..', '..');
 
 const assets = [
-  ['src/styles/base.css', 'dist/styles/base.css'],
+  // [absolute source, absolute destination]
+  [resolve(pkgRoot, 'src/styles/base.css'), resolve(pkgRoot, 'dist/styles/base.css')],
+  [resolve(repoRoot, 'README.md'),          resolve(pkgRoot, 'README.md')],
+  [resolve(repoRoot, 'LICENSE'),            resolve(pkgRoot, 'LICENSE')],
 ];
 
-for (const [from, to] of assets) {
-  const src = resolve(pkgRoot, from);
-  const dst = resolve(pkgRoot, to);
+for (const [src, dst] of assets) {
   mkdirSync(dirname(dst), { recursive: true });
   copyFileSync(src, dst);
 }
