@@ -1,65 +1,61 @@
 name: Publish @zdenekkurecka/astro-consent
 
-# Publishes the package to npm using npm Trusted Publishing (OIDC).
+# Changesets-driven release pipeline for @zdenekkurecka/astro-consent.
 #
-# No long-lived credentials are stored anywhere. At publish time, GitHub
-# issues a short-lived OIDC token, the npm CLI exchanges it for a one-shot
-# registry credential, and the tarball is published with a provenance
-# attestation so the npm page shows "Built and signed on GitHub Actions".
+# Flow:
+#   1. Contributors add a changeset (`pnpm changeset`) describing their change.
+#   2. On push to `main`, this workflow runs `changesets/action`:
+#        - if there are unreleased changesets, it opens/updates a
+#          "Version Packages" PR that bumps versions and updates CHANGELOG.md
+#        - if there are no unreleased changesets (i.e. the Version PR was just
+#          merged), it runs the `release` script which builds the package and
+#          publishes to npm via `changeset publish`.
+#
+# Publishing uses npm Trusted Publishing (OIDC). No long-lived credentials are
+# stored anywhere. At publish time, GitHub issues a short-lived OIDC token, the
+# npm CLI exchanges it for a one-shot registry credential, and the tarball is
+# published with a provenance attestation ("Built and signed on GitHub Actions").
 #
 # ─── One-time setup on npmjs.com ─────────────────────────────────────────
 #
-# 1. Publish 0.1.0 manually once to create the package on npm (see README).
-#    After the package exists, anyone with owner access to it can configure
-#    a trusted publisher.
+# https://www.npmjs.com/package/@zdenekkurecka/astro-consent/access
+#   → "Trusted Publisher" → "Add trusted publisher" → GitHub Actions
 #
-# 2. https://www.npmjs.com/package/@zdenekkurecka/astro-consent/access
-#    → "Trusted Publisher" → "Add trusted publisher" → GitHub Actions
+#   Organization or user:  zdenekkurecka
+#   Repository:            astro-consent
+#   Workflow filename:     publish.yml        ← must match this file
+#   Environment:           (leave empty)
 #
-#    Fill in:
-#      Organization or user:  zdenekkurecka
-#      Repository:            astro-consent
-#      Workflow filename:     publish.yml        ← must match this file
-#      Environment:           (leave empty unless you add one below)
-#
-#    Save. npm will now accept OIDC publishes from runs of this workflow
-#    on this repo.
-#
-# No repo secrets are needed. If you see `ENEEDAUTH` or `E401` on publish,
-# the most common cause is a mismatch between the values above and the
-# actual workflow that ran (branch, filename, repo name).
-#
-# ─── Triggers ─────────────────────────────────────────────────────────────
-#   - push of a tag matching `astro-consent-v*` (e.g. `astro-consent-v0.1.1`)
-#   - manual run from the Actions tab (useful for re-runs / dry-runs)
+# No repo secrets are needed for npm. `GITHUB_TOKEN` is provided automatically
+# and is used by changesets/action to open/update the Version Packages PR.
 
 on:
   push:
-    tags:
-      - 'astro-consent-v*'
+    branches:
+      - main
   workflow_dispatch:
-    inputs:
-      dry-run:
-        description: 'Run without actually publishing (npm publish --dry-run)'
-        type: boolean
-        default: false
 
-# Minimum permissions for OIDC trusted publishing:
-#   - id-token: write → lets the runner request an OIDC token for npm to verify
-#   - contents: read  → needed by actions/checkout
+concurrency:
+  group: publish-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
-  contents: read
-  id-token: write
+  contents: write        # create tags / GitHub Releases, push version bump PR
+  pull-requests: write   # open/update the "Version Packages" PR
+  id-token: write        # OIDC token for npm Trusted Publishing
 
 jobs:
-  publish:
-    name: Build, verify and publish
+  release:
+    name: Version or publish
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # changesets needs full history to compute the release notes
+          fetch-depth: 0
 
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
@@ -69,46 +65,32 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          # npm Trusted Publishing + provenance requires a reasonably recent
-          # npm CLI (>= 11.5.1). Node 24 (LTS "Krypton") ships with npm 11.x,
-          # so we get a compatible npm out of the box — no self-upgrade step
-          # needed. Upgrading npm in-place on Node 22 (which ships npm 10.x)
-          # is unreliable on GitHub Actions runners: the 10 → 11 self-upgrade
-          # can leave the running process with a half-replaced node_modules
-          # tree and fail with `Cannot find module 'promise-retry'`.
+          # Node 24 ships with npm 11.x, required for Trusted Publishing +
+          # provenance. See prior publish.yml history for the rationale.
           node-version: 24
           registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build package
-        run: pnpm --filter @zdenekkurecka/astro-consent build
-
-      - name: Verify tag matches package.json version
-        if: startsWith(github.ref, 'refs/tags/astro-consent-v')
-        run: |
-          TAG_VERSION="${GITHUB_REF_NAME#astro-consent-v}"
-          PKG_VERSION="$(node -p "require('./packages/astro-consent/package.json').version")"
-          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
-            echo "::error::Tag version ($TAG_VERSION) does not match package.json version ($PKG_VERSION)"
-            exit 1
-          fi
-          echo "Tag matches package.json: $PKG_VERSION"
-
       - name: Lint published package shape (publint)
         working-directory: packages/astro-consent
-        run: pnpm dlx publint@latest
+        run: |
+          pnpm --filter @zdenekkurecka/astro-consent build
+          pnpm dlx publint@latest
 
       - name: Smoke-test integration via playground build
         run: pnpm --filter playground build
 
-      - name: Publish to npm (with provenance)
-        working-directory: packages/astro-consent
-        run: |
-          if [ "${{ github.event.inputs.dry-run }}" = "true" ]; then
-            echo "Dry run — not publishing"
-            npm publish --dry-run --provenance --access public
-          else
-            npm publish --provenance --access public
-          fi
+      - name: Create Release PR or publish to npm
+        id: changesets
+        uses: changesets/action@v1
+        with:
+          version: pnpm version-packages
+          publish: pnpm release
+          title: 'chore(release): version packages'
+          commit: 'chore(release): version packages'
+          createGithubReleases: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_PROVENANCE: 'true'
