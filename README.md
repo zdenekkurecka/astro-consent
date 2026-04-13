@@ -28,6 +28,7 @@
   - [Customise banner & modal text (and localize it)](#customise-banner--modal-text-and-localize-it)
   - [Theme the UI](#theme-the-ui)
   - [Use with a strict Content Security Policy](#use-with-a-strict-content-security-policy)
+  - [Debug mode](#debug-mode)
 - [Runtime API](#runtime-api)
 - [Events](#events)
 - [Accessibility](#accessibility)
@@ -172,6 +173,16 @@ interface ConsentConfig {
    * @default undefined (no expiry)
    */
   maxAgeDays?: number;
+
+  /**
+   * Enables verbose `console.debug` logging of runtime events (init, banner
+   * show, accept/reject/save, event dispatch, storage writes) and exposes
+   * `window.astroConsent.debug()` for an on-demand state dump. Gate it
+   * behind `import.meta.env.DEV` so it never ships to production.
+   *
+   * @default false
+   */
+  debug?: boolean;
 
   /**
    * Single-language text overrides for the banner and modal. Any field
@@ -457,6 +468,48 @@ integration only uses `injectScript('page', ...)` (emitted as a hashed
 external module script) and `injectScript('page-ssr', ...)` (which flows
 through Astro's CSS extractor and becomes a hashed external stylesheet).
 
+### Debug mode
+
+During local integration work it can be hard to tell what the runtime is
+doing — which events fired, which locale was resolved, whether the stored
+version still matches. Set `debug: true` to opt in to verbose logging. Gate
+it on `import.meta.env.DEV` so it never ships to production:
+
+```js
+// astro.config.mjs
+cookieConsent({
+  version: 1,
+  debug: import.meta.env.DEV,
+  categories: { /* ... */ },
+});
+```
+
+With debug on, the runtime emits `console.debug('[astro-consent]', …)` at
+every lifecycle point: init (with version, resolved locale, stored consent),
+banner show, accept/reject/save clicks, event dispatches, and localStorage
+writes. Because it uses `console.debug`, you need to include **Verbose** in
+your DevTools log level to see the messages.
+
+You also get an on-demand snapshot helper:
+
+```js
+window.astroConsent.debug();
+// groups and returns:
+// {
+//   config,          // the full serialized integration config
+//   resolvedLocale,  // matched <html lang> key, or null
+//   resolvedText,    // fully merged UI text used by the banner/modal
+//   storageKey,      // active localStorage key
+//   state,           // current ConsentState, or null
+//   versionMatch,    // stored version === config version
+//   needsConsent,    // true if banner would be shown right now
+// }
+```
+
+`astroConsent.debug` is only attached when `debug: true`, so production
+bundles stay clean. Typed as optional in `ConsentAPI`, so TypeScript will
+remind you to null-check it.
+
 ## Runtime API
 
 A global `window.astroConsent` is exposed (also aliased as
@@ -489,6 +542,14 @@ interface ConsentAPI {
 
   /** Open the preferences modal. */
   showPreferences(): void;
+
+  /**
+   * Dumps the current config, resolved locale/text, storage key, stored
+   * state, and version/needs-consent flags to a `console.group`, and
+   * returns the same snapshot. Only attached when the integration is
+   * configured with `debug: true`.
+   */
+  debug?(): ConsentDebugSnapshot;
 }
 
 interface ConsentState {

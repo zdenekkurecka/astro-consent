@@ -74,6 +74,23 @@ function mergeText(base: ResolvedConsentText, layer: ConsentText | undefined): R
  * overrides compose correctly — callers only need to supply the keys they
  * want to change.
  */
+/**
+ * Resolve which entry in `config.localeText` would apply for the current
+ * `<html lang>`, returning the tag that matched (exact or primary subtag), or
+ * `null` if there is no match / no localeText configured. Used by the debug
+ * helper so developers can see why a particular string layer was picked.
+ */
+export function resolveLocale(config: SerializableConsentConfig): string | null {
+  const localeText = config.localeText;
+  if (!localeText) return null;
+  const lang = (document.documentElement.lang || '').trim();
+  if (!lang) return null;
+  if (localeText[lang]) return lang;
+  const primary = lang.split('-')[0];
+  if (primary && primary !== lang && localeText[primary]) return primary;
+  return null;
+}
+
 export function resolveText(config: SerializableConsentConfig): ResolvedConsentText {
   let resolved = mergeText(BUILT_IN_DEFAULTS, config.text);
 

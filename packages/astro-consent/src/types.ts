@@ -66,6 +66,17 @@ export interface ConsentConfig {
    */
   maxAgeDays?: number;
 
+  /**
+   * Enables verbose `console.debug` logging of runtime events (init, banner
+   * show, accept/reject/save, event dispatch, storage writes) and exposes
+   * `window.astroConsent.debug()` for an on-demand state dump. Intended for
+   * local development; gate behind `import.meta.env.DEV` so it never ships
+   * to production.
+   *
+   * @default false
+   */
+  debug?: boolean;
+
   /** Single-language text overrides, or shared fallback for `localeText`. */
   text?: ConsentText;
 
@@ -91,8 +102,24 @@ export interface SerializableConsentConfig {
   cookiePolicy?: CookiePolicyLink;
   storageKey?: string;
   maxAgeDays?: number;
+  debug?: boolean;
   text?: ConsentText;
   localeText?: Record<string, ConsentText>;
+}
+
+/**
+ * Snapshot returned by `ConsentAPI.debug()` when `debug: true`. Captures the
+ * fully-resolved runtime state so developers can inspect what the integration
+ * sees without digging through localStorage or reading source.
+ */
+export interface ConsentDebugSnapshot {
+  config: SerializableConsentConfig;
+  resolvedLocale: string | null;
+  resolvedText: Record<string, unknown>;
+  storageKey: string;
+  state: ConsentState | null;
+  versionMatch: boolean;
+  needsConsent: boolean;
 }
 
 export interface ConsentAPI {
@@ -114,6 +141,12 @@ export interface ConsentAPI {
   show(): void;
   /** Open the preferences modal. */
   showPreferences(): void;
+  /**
+   * Dumps a `console.group` with the current config, resolved locale/text,
+   * storage key, and stored state, and returns the same snapshot. Only
+   * attached when the integration is configured with `debug: true`.
+   */
+  debug?(): ConsentDebugSnapshot;
 }
 
 /**
