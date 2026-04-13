@@ -25,6 +25,7 @@
   - [Open the preferences modal from a footer link](#open-the-preferences-modal-from-a-footer-link)
   - [Gate third-party scripts (GA, Meta Pixel, …)](#gate-third-party-scripts-ga-meta-pixel-)
   - [Re-prompt users after changing categories](#re-prompt-users-after-changing-categories)
+  - [Customise banner & modal text (and localize it)](#customise-banner--modal-text-and-localize-it)
   - [Theme the UI](#theme-the-ui)
   - [Use with a strict Content Security Policy](#use-with-a-strict-content-security-policy)
 - [Runtime API](#runtime-api)
@@ -64,6 +65,9 @@ they force you to serialize your tracker callbacks into a JSON config.
 - **Versioned consent** — bump a number to re-prompt every user
 - **Typed** config, runtime API, and `document` event map
 - **Optional cookie policy link** surfaced in both banner and preferences modal
+- **Fully configurable UI text** with partial overrides and per-locale
+  resolution from `<html lang>` — every banner / modal string can be
+  translated or customised
 - **Accessible modal**: `role="dialog"` / `aria-modal`, focus trap, focus
   restoration, `Escape` to close, click-outside to dismiss
 - **Strict-CSP safe**: no inline `<script>`, no inline `<style>`
@@ -149,6 +153,42 @@ interface ConsentConfig {
     /** Defaults to `"Cookie Policy"`. */
     label?: string;
   };
+
+  /**
+   * Single-language text overrides for the banner and modal. Any field
+   * omitted falls back to the built-in English default. Also used as a
+   * shared fallback layer under `localeText`.
+   */
+  text?: ConsentText;
+
+  /**
+   * Per-locale text overrides. Keys are BCP 47 language tags matched
+   * against `<html lang>` at runtime (e.g. `"en"`, `"cs"`, `"en-US"`).
+   *
+   * Resolution order: exact match → primary subtag → `text` →
+   * built-in defaults.
+   */
+  localeText?: Record<string, ConsentText>;
+}
+
+interface ConsentText {
+  // Banner
+  bannerText?: string;
+  acceptAll?: string;        // shared by banner + modal
+  rejectAll?: string;        // shared by banner + modal
+  manage?: string;
+
+  // Modal
+  modalTitle?: string;
+  closeAriaLabel?: string;
+  savePreferences?: string;
+
+  // Essential category
+  essentialLabel?: string;
+  essentialDescription?: string;
+
+  /** Per-category label/description overrides (key = category key). */
+  categories?: Record<string, { label?: string; description?: string }>;
 }
 ```
 
@@ -294,6 +334,72 @@ cookieConsent({
 Any stored consent with a lower version is treated as missing and the banner
 re-appears for every user on their next visit.
 
+### Customise banner & modal text (and localize it)
+
+Every string in the banner and modal can be overridden. For a single-language
+site, pass a `text` object. For a multi-lingual site, pass a `localeText`
+map keyed by BCP 47 language tag — the integration reads
+`document.documentElement.lang` at runtime and picks the best match.
+
+Resolution order: **exact locale match** → **primary subtag** (e.g. `en-GB`
+falls back to `en`) → shared `text` → **built-in English defaults**. All
+fields are optional and layers compose, so you only need to supply the keys
+you actually want to change.
+
+```ts
+cookieConsent({
+  version: 1,
+  categories: {
+    analytics: { label: 'Analytics', description: '…', default: false },
+  },
+  localeText: {
+    en: {
+      bannerText: 'We use cookies to improve your experience and analyse traffic.',
+      acceptAll: 'Accept all',
+      rejectAll: 'Reject all',
+      manage: 'Manage preferences',
+      modalTitle: 'Cookie preferences',
+      closeAriaLabel: 'Close preferences',
+      savePreferences: 'Save preferences',
+      essentialLabel: 'Essential',
+      essentialDescription: 'Required for the website to function. Cannot be disabled.',
+      categories: {
+        analytics: {
+          label: 'Analytics',
+          description: 'Helps us understand how visitors use the site.',
+        },
+      },
+    },
+    cs: {
+      bannerText: 'Používáme cookies ke zlepšení vašeho zážitku a analýze návštěvnosti.',
+      acceptAll: 'Přijmout vše',
+      rejectAll: 'Odmítnout vše',
+      manage: 'Spravovat předvolby',
+      modalTitle: 'Předvolby cookies',
+      closeAriaLabel: 'Zavřít předvolby',
+      savePreferences: 'Uložit předvolby',
+      essentialLabel: 'Nezbytné',
+      essentialDescription: 'Nutné pro fungování webu. Nelze vypnout.',
+      categories: {
+        analytics: {
+          label: 'Analytické',
+          description: 'Pomáhají nám pochopit, jak návštěvníci web používají.',
+        },
+      },
+    },
+  },
+});
+```
+
+Set `<html lang="cs">` and the Czech strings render; set `<html lang="en-GB">`
+and the `en` primary-subtag fallback kicks in. If neither `text` nor a
+matching `localeText` entry is supplied, the built-in English defaults are
+used.
+
+Per-category `label` / `description` pulled from `localeText` override the
+ones declared in `categories`, so you can keep a single category-key
+definition and translate its user-visible labels per language.
+
 ### Theme the UI
 
 The base stylesheet is injected automatically via Astro's CSS pipeline as a
@@ -341,7 +447,18 @@ interface ConsentAPI {
   /** Returns the currently stored consent state, or `null` if none. */
   get(): ConsentState | null;
 
-  /** Merge a partial category map into the current state and persist it. */
+  /**
+   * Merge a partial category map into the current state and persist it.
+   *
+   * If no consent has been recorded yet (first-time visitor who has not
+   * interacted with the banner), this seeds an initial consent record from
+   * the config defaults, hides the banner, and dispatches
+   * `astro-consent:consent`. Subsequent calls merge into the existing state
+   * and dispatch `astro-consent:change` instead.
+   *
+   * The `essential` category is always forced to `true` and cannot be
+   * disabled through this method.
+   */
   set(categories: Partial<Record<string, boolean>>): void;
 
   /** Clear the stored consent and re-show the banner. */
@@ -367,7 +484,9 @@ Example:
 // Read current state
 const state = window.zdenekkureckaConsent?.get();
 
-// Programmatically update
+// Programmatically update. Safe to call before the user has interacted
+// with the banner — the missing categories fall back to your config
+// defaults and an initial consent record is written.
 window.zdenekkureckaConsent?.set({ analytics: true });
 
 // Re-open the preferences modal (e.g. from a "Cookie settings" footer link)
@@ -396,6 +515,9 @@ autocompletion on `e.detail.categories`.
 - `Tab` / `Shift+Tab` is trapped inside the modal while it's open.
 - `Escape` closes the modal and returns focus to the trigger.
 - Clicking the overlay closes the modal; the overlay itself is `aria-hidden`.
+- Banner and modal both toggle `aria-hidden` in lockstep with their
+  visibility, so screen readers don't announce them while they are
+  visually hidden.
 - All buttons have `type="button"` so they never submit ambient forms.
 
 ## Repository layout
