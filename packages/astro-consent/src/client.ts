@@ -11,6 +11,7 @@ import {
 } from './consent.js';
 import {
   injectUI,
+  resolveText,
   showBanner,
   hideBanner,
   showModal,
@@ -36,8 +37,13 @@ function emit(type: typeof CONSENT_EVENT | typeof CHANGE_EVENT, state: ConsentSt
 }
 
 export function initConsentManager(config: SerializableConsentConfig): void {
+  // Resolve UI text once per init: reads <html lang>, merges built-in
+  // defaults → config.text → localeText[lang]. Passed to every injectUI call
+  // below so reset/show/showPreferences use the same resolved strings.
+  const text = resolveText(config);
+
   // Inject banner + modal DOM (idempotent).
-  injectUI(config);
+  injectUI(config, text);
 
   // Check consent state.
   if (needsConsent(config.version)) {
@@ -198,15 +204,15 @@ export function initConsentManager(config: SerializableConsentConfig): void {
     },
     reset: () => {
       clearConsent();
-      injectUI(config);
+      injectUI(config, text);
       showBanner();
     },
     show: () => {
-      injectUI(config);
+      injectUI(config, text);
       showBanner();
     },
     showPreferences: () => {
-      injectUI(config);
+      injectUI(config, text);
       hideBanner();
       const current = readConsent();
       if (current) {
