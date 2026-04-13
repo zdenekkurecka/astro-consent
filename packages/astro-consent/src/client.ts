@@ -20,6 +20,7 @@ import {
   injectUI,
   resolveText,
   resolveLocale,
+  setContainerTheme,
   showBanner,
   hideBanner,
   showModal,
@@ -254,6 +255,13 @@ export function initConsentManager(config: SerializableConsentConfig): void {
     show: () => {
       injectUI(config, text);
       showBanner();
+    },
+    setTheme: (mode) => {
+      // Make sure the container exists so the attribute has somewhere to
+      // live on first call (e.g. before the banner has ever been shown).
+      injectUI(config, text);
+      log(config.debug, `api.setTheme →`, mode);
+      setContainerTheme(mode);
     },
     showPreferences: () => {
       injectUI(config, text);
