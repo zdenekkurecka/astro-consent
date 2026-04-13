@@ -303,7 +303,7 @@ A classic "Cookie settings" link in your footer:
 Or programmatically, from anywhere in your app:
 
 ```ts
-window.zdenekkureckaConsent?.showPreferences();
+window.astroConsent?.showPreferences();
 ```
 
 ### Gate third-party scripts (GA, Meta Pixel, …)
@@ -459,7 +459,8 @@ through Astro's CSS extractor and becomes a hashed external stylesheet).
 
 ## Runtime API
 
-A global `window.zdenekkureckaConsent` is exposed:
+A global `window.astroConsent` is exposed (also aliased as
+`window.zdenekkureckaConsent`, deprecated):
 
 ```ts
 interface ConsentAPI {
@@ -501,18 +502,18 @@ Example:
 
 ```ts
 // Read current state
-const state = window.zdenekkureckaConsent?.get();
+const state = window.astroConsent?.get();
 
 // Programmatically update. Safe to call before the user has interacted
 // with the banner — the missing categories fall back to your config
 // defaults and an initial consent record is written.
-window.zdenekkureckaConsent?.set({ analytics: true });
+window.astroConsent?.set({ analytics: true });
 
 // Re-open the preferences modal (e.g. from a "Cookie settings" footer link)
-window.zdenekkureckaConsent?.showPreferences();
+window.astroConsent?.showPreferences();
 
 // Clear consent and re-prompt
-window.zdenekkureckaConsent?.reset();
+window.astroConsent?.reset();
 ```
 
 ## Events

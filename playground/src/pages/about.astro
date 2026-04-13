@@ -16,7 +16,7 @@ import Layout from '../layouts/Layout.astro';
   <script>
     document.addEventListener('astro:page-load', () => {
       const el = document.getElementById('state');
-      const consent = (window as any).zdenekkureckaConsent;
+      const consent = (window as any).astroConsent;
       if (el && consent) {
         const state = consent.get();
         el.textContent = state ? JSON.stringify(state, null, 2) : 'No consent data yet.';

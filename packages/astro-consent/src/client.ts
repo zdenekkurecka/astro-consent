@@ -233,5 +233,6 @@ export function initConsentManager(config: SerializableConsentConfig): void {
     },
   };
 
+  window.astroConsent = api;
   window.zdenekkureckaConsent = api;
 }

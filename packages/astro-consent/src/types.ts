@@ -143,6 +143,8 @@ declare global {
   }
 
   interface Window {
+    astroConsent?: ConsentAPI;
+    /** @deprecated Use `astroConsent` instead. */
     zdenekkureckaConsent?: ConsentAPI;
   }
 }
