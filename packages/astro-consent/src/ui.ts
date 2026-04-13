@@ -269,6 +269,27 @@ export function injectUI(config: SerializableConsentConfig, text: ResolvedConsen
   container.id = CONTAINER_ID;
   container.innerHTML = createBannerHTML(config, text) + createModalHTML(config, text);
   document.body.appendChild(container);
+
+  // Apply forced color mode (if any). "auto" / undefined leaves the
+  // attribute unset so the CSS falls back to prefers-color-scheme.
+  const mode = config.ui?.colorMode;
+  if (mode === 'light' || mode === 'dark') {
+    setContainerTheme(mode);
+  }
+}
+
+/**
+ * Set or clear `data-cc-theme` on the consent container. Passing `"auto"`
+ * removes the attribute so the UI follows `prefers-color-scheme`.
+ */
+export function setContainerTheme(mode: 'auto' | 'light' | 'dark'): void {
+  const container = document.getElementById(CONTAINER_ID);
+  if (!container) return;
+  if (mode === 'auto') {
+    container.removeAttribute('data-cc-theme');
+  } else {
+    container.setAttribute('data-cc-theme', mode);
+  }
 }
 
 export function showBanner(): void {

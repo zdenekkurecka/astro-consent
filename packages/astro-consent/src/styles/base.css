@@ -14,6 +14,50 @@
   --cc-font-family: inherit;
 }
 
+/* ── Dark mode defaults (prefers-color-scheme) ──────────────
+ * Zero specificity via :where() so any user override in their
+ * own stylesheet wins without !important.
+ * WCAG 2.1 AA: text on --cc-bg and --cc-text-muted on --cc-bg
+ * both clear 4.5:1 contrast.
+ */
+@media (prefers-color-scheme: dark) {
+  :where(:root) {
+    --cc-primary: #3b82f6;
+    --cc-primary-hover: #60a5fa;
+    --cc-bg: #1e293b;
+    --cc-surface: #334155;
+    --cc-text: #f1f5f9;
+    --cc-text-muted: #94a3b8;
+    --cc-border: #475569;
+  }
+}
+
+/* ── Explicit theme overrides via [data-cc-theme] ────────────
+ * Set by config `ui.colorMode: "light" | "dark"` or via
+ * `window.astroConsent.setTheme()`. Attribute-selector
+ * specificity (0,1,0) beats :where(:root) so these always win
+ * over the media-query defaults, regardless of source order.
+ */
+[data-cc-theme='light'] {
+  --cc-primary: #2563eb;
+  --cc-primary-hover: #1d4ed8;
+  --cc-bg: #ffffff;
+  --cc-surface: #f8fafc;
+  --cc-text: #0f172a;
+  --cc-text-muted: #64748b;
+  --cc-border: #e2e8f0;
+}
+
+[data-cc-theme='dark'] {
+  --cc-primary: #3b82f6;
+  --cc-primary-hover: #60a5fa;
+  --cc-bg: #1e293b;
+  --cc-surface: #334155;
+  --cc-text: #f1f5f9;
+  --cc-text-muted: #94a3b8;
+  --cc-border: #475569;
+}
+
 /* ── Banner ─────────────────────────────────────────────── */
 
 .cc-banner {

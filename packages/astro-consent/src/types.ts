@@ -9,6 +9,24 @@ export interface CookiePolicyLink {
   label?: string;
 }
 
+/** Color mode for the consent UI. */
+export type ConsentColorMode = 'auto' | 'light' | 'dark';
+
+/** Visual/UI-level configuration for the consent banner and modal. */
+export interface ConsentUIConfig {
+  /**
+   * Controls the color scheme of the consent UI.
+   *
+   * - `"auto"` (default): follows the user's `prefers-color-scheme`.
+   * - `"light"` / `"dark"`: forces the palette via a `data-cc-theme`
+   *   attribute on the consent container. Use this to sync the consent
+   *   UI with a site that has its own theme toggle.
+   *
+   * @default "auto"
+   */
+  colorMode?: ConsentColorMode;
+}
+
 /** Per-category label/description override used in `ConsentText.categories`. */
 export interface ConsentCategoryText {
   label?: string;
@@ -77,6 +95,9 @@ export interface ConsentConfig {
    */
   debug?: boolean;
 
+  /** Visual/UI configuration (color mode, etc.). */
+  ui?: ConsentUIConfig;
+
   /** Single-language text overrides, or shared fallback for `localeText`. */
   text?: ConsentText;
 
@@ -103,6 +124,7 @@ export interface SerializableConsentConfig {
   storageKey?: string;
   maxAgeDays?: number;
   debug?: boolean;
+  ui?: ConsentUIConfig;
   text?: ConsentText;
   localeText?: Record<string, ConsentText>;
 }
@@ -141,6 +163,15 @@ export interface ConsentAPI {
   show(): void;
   /** Open the preferences modal. */
   showPreferences(): void;
+  /**
+   * Sync the consent UI color scheme with the host site. Sets a
+   * `data-cc-theme` attribute on the consent container so the CSS
+   * variables resolve to the forced palette.
+   *
+   * Pass `"auto"` to clear the attribute and fall back to the
+   * `prefers-color-scheme` defaults.
+   */
+  setTheme(mode: ConsentColorMode): void;
   /**
    * Dumps a `console.group` with the current config, resolved locale/text,
    * storage key, and stored state, and returns the same snapshot. Only
