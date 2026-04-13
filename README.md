@@ -78,6 +78,25 @@ they force you to serialize your tracker callbacks into a JSON config.
 
 ## Installation
 
+The recommended way is to use Astro's integration installer, which adds the
+package and wires it into `astro.config.*` in one step:
+
+```sh
+# pnpm
+pnpm astro add @zdenekkurecka/astro-consent
+# npm
+npx astro add @zdenekkurecka/astro-consent
+# yarn
+yarn astro add @zdenekkurecka/astro-consent
+```
+
+> **Heads up:** `cookieConsent()` requires at least `version` and `categories`.
+> `astro add` inserts a bare `cookieConsent()` call — open `astro.config.*`
+> after it runs and pass the required options shown in [Quick start](#quick-start).
+> You'll get a clear error at build time if you forget.
+
+Or install manually:
+
 ```sh
 # pnpm
 pnpm add @zdenekkurecka/astro-consent
