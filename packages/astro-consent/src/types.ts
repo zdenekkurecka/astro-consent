@@ -9,10 +9,55 @@ export interface CookiePolicyLink {
   label?: string;
 }
 
+/** Per-category label/description override used in `ConsentText.categories`. */
+export interface ConsentCategoryText {
+  label?: string;
+  description?: string;
+}
+
+/**
+ * UI text overrides for the consent banner and preferences modal.
+ *
+ * All fields are optional. Unspecified fields fall back to the built-in
+ * English defaults, so you only need to provide the strings you want to
+ * change.
+ */
+export interface ConsentText {
+  // Banner
+  bannerText?: string;
+  acceptAll?: string;
+  rejectAll?: string;
+  manage?: string;
+
+  // Modal
+  modalTitle?: string;
+  closeAriaLabel?: string;
+  savePreferences?: string;
+
+  // Essential category
+  essentialLabel?: string;
+  essentialDescription?: string;
+
+  /** Per-category label/description overrides, keyed by category key. */
+  categories?: Record<string, ConsentCategoryText>;
+}
+
 export interface ConsentConfig {
   version: number;
   categories: Record<string, ConsentCategory>;
   cookiePolicy?: CookiePolicyLink;
+
+  /** Single-language text overrides, or shared fallback for `localeText`. */
+  text?: ConsentText;
+
+  /**
+   * Per-locale text overrides. Keys are BCP 47 language tags that match the
+   * `<html lang>` attribute (e.g. `"en"`, `"cs"`, `"en-US"`).
+   *
+   * Resolution order at runtime: exact match → primary subtag → `text` →
+   * built-in defaults.
+   */
+  localeText?: Record<string, ConsentText>;
 }
 
 export interface ConsentState {
@@ -25,6 +70,8 @@ export interface SerializableConsentConfig {
   version: number;
   categories: Record<string, ConsentCategory>;
   cookiePolicy?: CookiePolicyLink;
+  text?: ConsentText;
+  localeText?: Record<string, ConsentText>;
 }
 
 export interface ConsentAPI {

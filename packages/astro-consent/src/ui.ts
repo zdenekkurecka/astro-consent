@@ -1,4 +1,118 @@
-import type { SerializableConsentConfig } from './types.js';
+import type {
+  ConsentCategory,
+  ConsentCategoryText,
+  ConsentText,
+  SerializableConsentConfig,
+} from './types.js';
+
+/**
+ * Fully-resolved UI text used internally after merging built-in defaults,
+ * single-language `text` overrides, and the active locale entry.
+ */
+export type ResolvedConsentText = Required<Omit<ConsentText, 'categories'>> & {
+  categories: Record<string, ConsentCategoryText>;
+};
+
+/** Built-in English defaults. Every non-category field is a complete string. */
+const BUILT_IN_DEFAULTS: ResolvedConsentText = {
+  bannerText:
+    'We use cookies to enhance your browsing experience, serve personalized content, and analyze our traffic. Please choose your cookie preferences.',
+  acceptAll: 'Accept all',
+  rejectAll: 'Reject all',
+  manage: 'Manage preferences',
+  modalTitle: 'Cookie preferences',
+  closeAriaLabel: 'Close preferences',
+  savePreferences: 'Save preferences',
+  essentialLabel: 'Essential',
+  essentialDescription: 'Required for the website to function. Cannot be disabled.',
+  categories: {},
+};
+
+/**
+ * Merge a partial `ConsentText` layer onto an already-resolved base, returning
+ * a new resolved text. Only keys explicitly present in `layer` override the
+ * base; `undefined` values are ignored so partial layers compose correctly.
+ * The nested `categories` map is merged per-key, with each per-category
+ * override itself being a partial merge.
+ */
+function mergeText(base: ResolvedConsentText, layer: ConsentText | undefined): ResolvedConsentText {
+  if (!layer) return base;
+  const next: ResolvedConsentText = { ...base, categories: { ...base.categories } };
+
+  if (layer.bannerText !== undefined) next.bannerText = layer.bannerText;
+  if (layer.acceptAll !== undefined) next.acceptAll = layer.acceptAll;
+  if (layer.rejectAll !== undefined) next.rejectAll = layer.rejectAll;
+  if (layer.manage !== undefined) next.manage = layer.manage;
+  if (layer.modalTitle !== undefined) next.modalTitle = layer.modalTitle;
+  if (layer.closeAriaLabel !== undefined) next.closeAriaLabel = layer.closeAriaLabel;
+  if (layer.savePreferences !== undefined) next.savePreferences = layer.savePreferences;
+  if (layer.essentialLabel !== undefined) next.essentialLabel = layer.essentialLabel;
+  if (layer.essentialDescription !== undefined) {
+    next.essentialDescription = layer.essentialDescription;
+  }
+
+  if (layer.categories) {
+    for (const [key, override] of Object.entries(layer.categories)) {
+      if (!override) continue;
+      const existing = next.categories[key];
+      next.categories[key] = {
+        label: override.label ?? existing?.label,
+        description: override.description ?? existing?.description,
+      };
+    }
+  }
+
+  return next;
+}
+
+/**
+ * Resolve the UI text layers for the current document.
+ *
+ * Reads `document.documentElement.lang`, picks the best match from
+ * `config.localeText` (exact tag → primary subtag), and deep-merges the
+ * layers: built-in defaults → `config.text` → resolved locale entry. Partial
+ * overrides compose correctly — callers only need to supply the keys they
+ * want to change.
+ */
+export function resolveText(config: SerializableConsentConfig): ResolvedConsentText {
+  let resolved = mergeText(BUILT_IN_DEFAULTS, config.text);
+
+  const localeText = config.localeText;
+  if (localeText) {
+    // `document.documentElement` exists whenever this runs (client-side only).
+    const lang = (document.documentElement.lang || '').trim();
+    if (lang) {
+      const exact = localeText[lang];
+      if (exact) {
+        resolved = mergeText(resolved, exact);
+      } else {
+        const primary = lang.split('-')[0];
+        if (primary && primary !== lang) {
+          const sub = localeText[primary];
+          if (sub) resolved = mergeText(resolved, sub);
+        }
+      }
+    }
+  }
+
+  return resolved;
+}
+
+/**
+ * Pick the label/description for a category, preferring any resolved text
+ * override and falling back to the config-supplied category definition.
+ */
+function resolveCategoryText(
+  key: string,
+  fallback: Pick<ConsentCategory, 'label' | 'description'>,
+  text: ResolvedConsentText,
+): { label: string; description: string } {
+  const override = text.categories[key];
+  return {
+    label: override?.label ?? fallback.label,
+    description: override?.description ?? fallback.description,
+  };
+}
 
 const CONTAINER_ID = 'cc-container';
 const MODAL_ID = 'cc-modal';
@@ -40,20 +154,19 @@ function createPolicyLinkHTML(
   return `<a class="${className}" href="${escapeHtml(safeUrl)}" data-cc="policy-link">${escapeHtml(label)}</a>`;
 }
 
-function createBannerHTML(config: SerializableConsentConfig): string {
+function createBannerHTML(config: SerializableConsentConfig, text: ResolvedConsentText): string {
   const policyLink = createPolicyLinkHTML(config.cookiePolicy, 'cc-policy-link');
   return `
     <div class="cc-banner" id="${BANNER_ID}" role="region" aria-label="Cookie consent" aria-hidden="true">
       <div class="cc-banner-inner">
         <p class="cc-banner-text">
-          We use cookies to enhance your browsing experience, serve personalized content, and analyze our traffic.
-          Please choose your cookie preferences.
+          ${escapeHtml(text.bannerText)}
           ${policyLink}
         </p>
         <div class="cc-banner-actions">
-          <button type="button" class="cc-btn cc-btn-primary" data-cc="accept-all">Accept all</button>
-          <button type="button" class="cc-btn cc-btn-secondary" data-cc="reject-all">Reject all</button>
-          <button type="button" class="cc-btn cc-btn-link" data-cc="manage">Manage preferences</button>
+          <button type="button" class="cc-btn cc-btn-primary" data-cc="accept-all">${escapeHtml(text.acceptAll)}</button>
+          <button type="button" class="cc-btn cc-btn-secondary" data-cc="reject-all">${escapeHtml(text.rejectAll)}</button>
+          <button type="button" class="cc-btn cc-btn-link" data-cc="manage">${escapeHtml(text.manage)}</button>
         </div>
       </div>
     </div>`;
@@ -84,17 +197,20 @@ function createCategoryToggle(
     </div>`;
 }
 
-function createModalHTML(config: SerializableConsentConfig): string {
+function createModalHTML(config: SerializableConsentConfig, text: ResolvedConsentText): string {
   const essentialToggle = createCategoryToggle(
     'essential',
-    'Essential',
-    'Required for the website to function. Cannot be disabled.',
+    text.essentialLabel,
+    text.essentialDescription,
     true,
     true,
   );
 
   const categoryToggles = Object.entries(config.categories)
-    .map(([key, cat]) => createCategoryToggle(key, cat.label, cat.description, false, cat.default))
+    .map(([key, cat]) => {
+      const resolved = resolveCategoryText(key, cat, text);
+      return createCategoryToggle(key, resolved.label, resolved.description, false, cat.default);
+    })
     .join('');
 
   const policyLink = createPolicyLinkHTML(config.cookiePolicy, 'cc-policy-link cc-modal-policy-link');
@@ -112,8 +228,8 @@ function createModalHTML(config: SerializableConsentConfig): string {
     >
       <div class="cc-modal-inner">
         <div class="cc-modal-header">
-          <h2 class="cc-modal-title" id="${MODAL_TITLE_ID}">Cookie preferences</h2>
-          <button type="button" class="cc-modal-close" data-cc="close-modal" aria-label="Close preferences">&times;</button>
+          <h2 class="cc-modal-title" id="${MODAL_TITLE_ID}">${escapeHtml(text.modalTitle)}</h2>
+          <button type="button" class="cc-modal-close" data-cc="close-modal" aria-label="${escapeHtml(text.closeAriaLabel)}">&times;</button>
         </div>
         <div class="cc-modal-body">
           ${essentialToggle}
@@ -121,20 +237,20 @@ function createModalHTML(config: SerializableConsentConfig): string {
           ${policyLink}
         </div>
         <div class="cc-modal-footer">
-          <button type="button" class="cc-btn cc-btn-primary" data-cc="modal-accept-all">Accept all</button>
-          <button type="button" class="cc-btn cc-btn-secondary" data-cc="modal-reject-all">Reject all</button>
-          <button type="button" class="cc-btn cc-btn-primary" data-cc="save-preferences">Save preferences</button>
+          <button type="button" class="cc-btn cc-btn-primary" data-cc="modal-accept-all">${escapeHtml(text.acceptAll)}</button>
+          <button type="button" class="cc-btn cc-btn-secondary" data-cc="modal-reject-all">${escapeHtml(text.rejectAll)}</button>
+          <button type="button" class="cc-btn cc-btn-primary" data-cc="save-preferences">${escapeHtml(text.savePreferences)}</button>
         </div>
       </div>
     </div>`;
 }
 
-export function injectUI(config: SerializableConsentConfig): void {
+export function injectUI(config: SerializableConsentConfig, text: ResolvedConsentText): void {
   if (document.getElementById(CONTAINER_ID)) return;
 
   const container = document.createElement('div');
   container.id = CONTAINER_ID;
-  container.innerHTML = createBannerHTML(config) + createModalHTML(config);
+  container.innerHTML = createBannerHTML(config, text) + createModalHTML(config, text);
   document.body.appendChild(container);
 }
 
