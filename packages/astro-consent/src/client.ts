@@ -121,6 +121,15 @@ export function initConsentManager(config: SerializableConsentConfig): void {
           }
           break;
         }
+
+        case 'policy-link': {
+          // The policy link is tagged with data-cc so it's discoverable as a
+          // consent-related element, but navigation is handled by the
+          // browser — nothing to do here. Explicitly listed so a future
+          // default case (e.g. logging unknown actions with preventDefault)
+          // doesn't accidentally break the link.
+          break;
+        }
       }
     });
 
@@ -155,20 +164,37 @@ export function initConsentManager(config: SerializableConsentConfig): void {
     get: () => readConsent(),
     set: (categories) => {
       const current = readConsent();
-      if (!current) return;
-      const merged: Record<string, boolean> = { ...current.categories, essential: true };
+      // If no consent has been recorded yet, seed it with the config defaults
+      // so callers can set categories programmatically before the banner has
+      // been interacted with.
+      const baseCategories: Record<string, boolean> = { essential: true };
+      if (current) {
+        Object.assign(baseCategories, current.categories, { essential: true });
+      } else {
+        for (const [key, cat] of Object.entries(config.categories)) {
+          baseCategories[key] = cat.default;
+        }
+      }
       for (const [key, value] of Object.entries(categories)) {
         if (key !== 'essential' && value !== undefined) {
-          merged[key] = value;
+          baseCategories[key] = value;
         }
       }
       const state: ConsentState = {
-        version: current.version,
+        version: current ? current.version : config.version,
         timestamp: Date.now(),
-        categories: merged,
+        categories: baseCategories,
       };
       writeConsent(state);
-      emit(CHANGE_EVENT, state);
+      // If this is the first consent record, the banner should disappear and
+      // a CONSENT_EVENT should fire (not CHANGE_EVENT).
+      if (!current) {
+        hideBanner();
+        consentFiredThisSession = true;
+        emit(CONSENT_EVENT, state);
+      } else {
+        emit(CHANGE_EVENT, state);
+      }
     },
     reset: () => {
       clearConsent();

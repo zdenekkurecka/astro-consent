@@ -341,7 +341,18 @@ interface ConsentAPI {
   /** Returns the currently stored consent state, or `null` if none. */
   get(): ConsentState | null;
 
-  /** Merge a partial category map into the current state and persist it. */
+  /**
+   * Merge a partial category map into the current state and persist it.
+   *
+   * If no consent has been recorded yet (first-time visitor who has not
+   * interacted with the banner), this seeds an initial consent record from
+   * the config defaults, hides the banner, and dispatches
+   * `astro-consent:consent`. Subsequent calls merge into the existing state
+   * and dispatch `astro-consent:change` instead.
+   *
+   * The `essential` category is always forced to `true` and cannot be
+   * disabled through this method.
+   */
   set(categories: Partial<Record<string, boolean>>): void;
 
   /** Clear the stored consent and re-show the banner. */
@@ -367,7 +378,9 @@ Example:
 // Read current state
 const state = window.zdenekkureckaConsent?.get();
 
-// Programmatically update
+// Programmatically update. Safe to call before the user has interacted
+// with the banner — the missing categories fall back to your config
+// defaults and an initial consent record is written.
 window.zdenekkureckaConsent?.set({ analytics: true });
 
 // Re-open the preferences modal (e.g. from a "Cookie settings" footer link)
@@ -396,6 +409,9 @@ autocompletion on `e.detail.categories`.
 - `Tab` / `Shift+Tab` is trapped inside the modal while it's open.
 - `Escape` closes the modal and returns focus to the trigger.
 - Clicking the overlay closes the modal; the overlay itself is `aria-hidden`.
+- Banner and modal both toggle `aria-hidden` in lockstep with their
+  visibility, so screen readers don't announce them while they are
+  visually hidden.
 - All buttons have `type="button"` so they never submit ambient forms.
 
 ## Repository layout

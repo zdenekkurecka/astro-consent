@@ -28,10 +28,23 @@ export interface SerializableConsentConfig {
 }
 
 export interface ConsentAPI {
+  /** Returns the currently stored consent state, or `null` if none. */
   get(): ConsentState | null;
+  /**
+   * Merge a partial category map into the current state and persist it.
+   *
+   * If no consent has been recorded yet, this seeds an initial consent
+   * record from the config defaults, hides the banner, and dispatches
+   * `astro-consent:consent`. Subsequent calls merge into the existing
+   * state and dispatch `astro-consent:change` instead. The `essential`
+   * category is always forced to `true`.
+   */
   set(categories: Partial<Record<string, boolean>>): void;
+  /** Clear the stored consent and re-show the banner. */
   reset(): void;
+  /** Show the consent banner. */
   show(): void;
+  /** Open the preferences modal. */
   showPreferences(): void;
 }
 

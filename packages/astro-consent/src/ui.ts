@@ -43,7 +43,7 @@ function createPolicyLinkHTML(
 function createBannerHTML(config: SerializableConsentConfig): string {
   const policyLink = createPolicyLinkHTML(config.cookiePolicy, 'cc-policy-link');
   return `
-    <div class="cc-banner" id="${BANNER_ID}" role="region" aria-label="Cookie consent">
+    <div class="cc-banner" id="${BANNER_ID}" role="region" aria-label="Cookie consent" aria-hidden="true">
       <div class="cc-banner-inner">
         <p class="cc-banner-text">
           We use cookies to enhance your browsing experience, serve personalized content, and analyze our traffic.
@@ -139,11 +139,15 @@ export function injectUI(config: SerializableConsentConfig): void {
 }
 
 export function showBanner(): void {
-  document.getElementById(BANNER_ID)?.classList.add('cc-visible');
+  const el = document.getElementById(BANNER_ID);
+  el?.classList.add('cc-visible');
+  el?.setAttribute('aria-hidden', 'false');
 }
 
 export function hideBanner(): void {
-  document.getElementById(BANNER_ID)?.classList.remove('cc-visible');
+  const el = document.getElementById(BANNER_ID);
+  el?.classList.remove('cc-visible');
+  el?.setAttribute('aria-hidden', 'true');
 }
 
 /**
