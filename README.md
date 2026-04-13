@@ -155,6 +155,15 @@ interface ConsentConfig {
   };
 
   /**
+   * localStorage key used to persist the consent record. Override this when
+   * multiple Astro apps share a single origin (e.g. `example.com/docs` and
+   * `example.com/app`) so they don't clobber each other's state.
+   *
+   * @default "astro-consent"
+   */
+  storageKey?: string;
+
+  /**
    * Single-language text overrides for the banner and modal. Any field
    * omitted falls back to the built-in English default. Also used as a
    * shared fallback layer under `localeText`.

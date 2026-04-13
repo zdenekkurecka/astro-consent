@@ -1,6 +1,11 @@
 import type { ConsentState, SerializableConsentConfig } from './types.js';
 
-const STORAGE_KEY = 'astro-consent';
+const DEFAULT_STORAGE_KEY = 'astro-consent';
+let STORAGE_KEY: string = DEFAULT_STORAGE_KEY;
+
+export function setStorageKey(key: string | undefined): void {
+  STORAGE_KEY = key || DEFAULT_STORAGE_KEY;
+}
 
 export function readConsent(): ConsentState | null {
   try {
