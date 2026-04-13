@@ -51,7 +51,7 @@ export function initConsentManager(config: SerializableConsentConfig): void {
   injectUI(config, text);
 
   // Check consent state.
-  if (needsConsent(config.version)) {
+  if (needsConsent(config.version, config.maxAgeDays)) {
     showBanner();
   } else if (!consentFiredThisSession) {
     // Fire the consent event once per session (not on every SPA navigation).
@@ -115,7 +115,7 @@ export function initConsentManager(config: SerializableConsentConfig): void {
 
         case 'save-preferences': {
           const selections = getModalSelections();
-          const isUpdate = !needsConsent(config.version);
+          const isUpdate = !needsConsent(config.version, config.maxAgeDays);
           const state = savePreferences(config, selections);
           writeConsent(state);
           hideModal();
@@ -127,7 +127,7 @@ export function initConsentManager(config: SerializableConsentConfig): void {
         case 'close-modal': {
           hideModal();
           // Re-show banner if consent hasn't been given yet.
-          if (needsConsent(config.version)) {
+          if (needsConsent(config.version, config.maxAgeDays)) {
             showBanner();
           }
           break;
@@ -148,7 +148,7 @@ export function initConsentManager(config: SerializableConsentConfig): void {
     document.addEventListener('click', (e) => {
       if ((e.target as HTMLElement).id === 'cc-overlay') {
         hideModal();
-        if (needsConsent(config.version)) {
+        if (needsConsent(config.version, config.maxAgeDays)) {
           showBanner();
         }
       }
@@ -160,7 +160,7 @@ export function initConsentManager(config: SerializableConsentConfig): void {
 
       if (e.key === 'Escape') {
         hideModal();
-        if (needsConsent(config.version)) {
+        if (needsConsent(config.version, config.maxAgeDays)) {
           showBanner();
         }
         return;
