@@ -33,9 +33,14 @@ export function clearConsent(): void {
   }
 }
 
-export function needsConsent(configVersion: number): boolean {
+export function needsConsent(configVersion: number, maxAgeDays?: number): boolean {
   const state = readConsent();
-  return !state || state.version < configVersion;
+  if (!state || state.version < configVersion) return true;
+  if (maxAgeDays !== undefined) {
+    const ageMs = Date.now() - state.timestamp;
+    if (ageMs > maxAgeDays * 86_400_000) return true;
+  }
+  return false;
 }
 
 export function acceptAll(config: SerializableConsentConfig): ConsentState {

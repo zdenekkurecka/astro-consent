@@ -164,6 +164,16 @@ interface ConsentConfig {
   storageKey?: string;
 
   /**
+   * Maximum age of a stored consent record, in days. When set, a consent
+   * record older than this is treated as missing and the banner is
+   * re-shown — useful for complying with GDPR/DPA guidance that
+   * recommends re-prompting every 6–12 months.
+   *
+   * @default undefined (no expiry)
+   */
+  maxAgeDays?: number;
+
+  /**
    * Single-language text overrides for the banner and modal. Any field
    * omitted falls back to the built-in English default. Also used as a
    * shared fallback layer under `localeText`.

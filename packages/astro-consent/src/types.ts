@@ -56,6 +56,16 @@ export interface ConsentConfig {
    */
   storageKey?: string;
 
+  /**
+   * Maximum age of a stored consent record, in days. When set, consent older
+   * than this is treated as missing and the banner is re-shown. Useful for
+   * aligning with GDPR/DPA guidance that recommends re-prompting every 6–12
+   * months.
+   *
+   * @default undefined (no expiry)
+   */
+  maxAgeDays?: number;
+
   /** Single-language text overrides, or shared fallback for `localeText`. */
   text?: ConsentText;
 
@@ -80,6 +90,7 @@ export interface SerializableConsentConfig {
   categories: Record<string, ConsentCategory>;
   cookiePolicy?: CookiePolicyLink;
   storageKey?: string;
+  maxAgeDays?: number;
   text?: ConsentText;
   localeText?: Record<string, ConsentText>;
 }
