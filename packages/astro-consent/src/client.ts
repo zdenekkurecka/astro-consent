@@ -1,4 +1,9 @@
-import type { ConsentState, SerializableConsentConfig, ConsentAPI } from './types.js';
+import type {
+  ConsentState,
+  SerializableConsentConfig,
+  ConsentAPI,
+  ConsentDebugSnapshot,
+} from './types.js';
 import { CONSENT_EVENT, CHANGE_EVENT } from './types.js';
 import {
   readConsent,
@@ -9,10 +14,12 @@ import {
   rejectAll,
   savePreferences,
   setStorageKey,
+  getStorageKey,
 } from './consent.js';
 import {
   injectUI,
   resolveText,
+  resolveLocale,
   showBanner,
   hideBanner,
   showModal,
@@ -22,6 +29,15 @@ import {
   updateModalToggles,
   handleModalTabTrap,
 } from './ui.js';
+
+const LOG_PREFIX = '[astro-consent]';
+
+function log(enabled: boolean | undefined, ...args: unknown[]): void {
+  if (!enabled) return;
+  // console.debug is filterable separately from .log in DevTools and is
+  // stripped by default in Chrome's standard log level.
+  console.debug(LOG_PREFIX, ...args);
+}
 
 let listenerAttached = false;
 let consentFiredThisSession = false;
@@ -33,8 +49,18 @@ let consentFiredThisSession = false;
  * and reference outer scope — none of which works when a callback is
  * serialized with `Function.prototype.toString`.
  */
-function emit(type: typeof CONSENT_EVENT | typeof CHANGE_EVENT, state: ConsentState): void {
+function emit(
+  type: typeof CONSENT_EVENT | typeof CHANGE_EVENT,
+  state: ConsentState,
+  debug?: boolean,
+): void {
+  log(debug, `emit ${type}`, state);
   document.dispatchEvent(new CustomEvent(type, { detail: state }));
+}
+
+function persist(state: ConsentState, debug?: boolean): void {
+  log(debug, `localStorage write (${getStorageKey()})`, state);
+  writeConsent(state);
 }
 
 export function initConsentManager(config: SerializableConsentConfig): void {
@@ -50,15 +76,23 @@ export function initConsentManager(config: SerializableConsentConfig): void {
   // Inject banner + modal DOM (idempotent).
   injectUI(config, text);
 
+  const initialState = readConsent();
+  const initialNeeds = needsConsent(config.version, config.maxAgeDays);
+  log(
+    config.debug,
+    `init — version: ${config.version}, locale: ${JSON.stringify(resolveLocale(config))}, consent: ${initialState ? 'stored' : 'null'}${initialNeeds ? ' (needs consent)' : ''}`,
+    { state: initialState },
+  );
+
   // Check consent state.
-  if (needsConsent(config.version, config.maxAgeDays)) {
+  if (initialNeeds) {
+    log(config.debug, 'banner shown');
     showBanner();
   } else if (!consentFiredThisSession) {
     // Fire the consent event once per session (not on every SPA navigation).
     consentFiredThisSession = true;
-    const existing = readConsent();
-    if (existing) {
-      emit(CONSENT_EVENT, existing);
+    if (initialState) {
+      emit(CONSENT_EVENT, initialState, config.debug);
     }
   }
 
@@ -75,23 +109,25 @@ export function initConsentManager(config: SerializableConsentConfig): void {
       switch (action) {
         case 'accept-all':
         case 'modal-accept-all': {
+          log(config.debug, `${action} →`, 'all categories: true');
           const state = acceptAll(config);
-          writeConsent(state);
+          persist(state, config.debug);
           hideBanner();
           hideModal();
           consentFiredThisSession = true;
-          emit(CONSENT_EVENT, state);
+          emit(CONSENT_EVENT, state, config.debug);
           break;
         }
 
         case 'reject-all':
         case 'modal-reject-all': {
+          log(config.debug, `${action} →`, 'non-essential categories: false');
           const state = rejectAll(config);
-          writeConsent(state);
+          persist(state, config.debug);
           hideBanner();
           hideModal();
           consentFiredThisSession = true;
-          emit(CONSENT_EVENT, state);
+          emit(CONSENT_EVENT, state, config.debug);
           break;
         }
 
@@ -116,11 +152,12 @@ export function initConsentManager(config: SerializableConsentConfig): void {
         case 'save-preferences': {
           const selections = getModalSelections();
           const isUpdate = !needsConsent(config.version, config.maxAgeDays);
+          log(config.debug, `save-preferences →`, selections, isUpdate ? '(update)' : '(initial)');
           const state = savePreferences(config, selections);
-          writeConsent(state);
+          persist(state, config.debug);
           hideModal();
           consentFiredThisSession = true;
-          emit(isUpdate ? CHANGE_EVENT : CONSENT_EVENT, state);
+          emit(isUpdate ? CHANGE_EVENT : CONSENT_EVENT, state, config.debug);
           break;
         }
 
@@ -196,18 +233,20 @@ export function initConsentManager(config: SerializableConsentConfig): void {
         timestamp: Date.now(),
         categories: baseCategories,
       };
-      writeConsent(state);
+      log(config.debug, 'api.set →', categories);
+      persist(state, config.debug);
       // If this is the first consent record, the banner should disappear and
       // a CONSENT_EVENT should fire (not CHANGE_EVENT).
       if (!current) {
         hideBanner();
         consentFiredThisSession = true;
-        emit(CONSENT_EVENT, state);
+        emit(CONSENT_EVENT, state, config.debug);
       } else {
-        emit(CHANGE_EVENT, state);
+        emit(CHANGE_EVENT, state, config.debug);
       }
     },
     reset: () => {
+      log(config.debug, 'api.reset — clearing stored consent');
       clearConsent();
       injectUI(config, text);
       showBanner();
@@ -232,6 +271,32 @@ export function initConsentManager(config: SerializableConsentConfig): void {
       showModal();
     },
   };
+
+  if (config.debug) {
+    api.debug = (): ConsentDebugSnapshot => {
+      const state = readConsent();
+      const snapshot: ConsentDebugSnapshot = {
+        config,
+        resolvedLocale: resolveLocale(config),
+        resolvedText: text as unknown as Record<string, unknown>,
+        storageKey: getStorageKey(),
+        state,
+        versionMatch: state ? state.version === config.version : false,
+        needsConsent: needsConsent(config.version, config.maxAgeDays),
+      };
+      // eslint-disable-next-line no-console
+      console.group(`${LOG_PREFIX} debug snapshot`);
+      console.log('config', snapshot.config);
+      console.log('resolvedLocale', snapshot.resolvedLocale);
+      console.log('resolvedText', snapshot.resolvedText);
+      console.log('storageKey', snapshot.storageKey);
+      console.log('state', snapshot.state);
+      console.log('versionMatch', snapshot.versionMatch);
+      console.log('needsConsent', snapshot.needsConsent);
+      console.groupEnd();
+      return snapshot;
+    };
+  }
 
   window.astroConsent = api;
   window.zdenekkureckaConsent = api;

@@ -7,6 +7,10 @@ export function setStorageKey(key: string | undefined): void {
   STORAGE_KEY = key || DEFAULT_STORAGE_KEY;
 }
 
+export function getStorageKey(): string {
+  return STORAGE_KEY;
+}
+
 export function readConsent(): ConsentState | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
