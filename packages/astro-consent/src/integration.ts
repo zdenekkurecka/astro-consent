@@ -7,6 +7,7 @@ export default function cookieConsent(userConfig: ConsentConfig): AstroIntegrati
     version: userConfig.version,
     categories: userConfig.categories,
     cookiePolicy: userConfig.cookiePolicy,
+    storageKey: userConfig.storageKey,
     text: userConfig.text,
     localeText: userConfig.localeText,
   };

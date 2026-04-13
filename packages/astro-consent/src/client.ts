@@ -8,6 +8,7 @@ import {
   acceptAll,
   rejectAll,
   savePreferences,
+  setStorageKey,
 } from './consent.js';
 import {
   injectUI,
@@ -37,6 +38,10 @@ function emit(type: typeof CONSENT_EVENT | typeof CHANGE_EVENT, state: ConsentSt
 }
 
 export function initConsentManager(config: SerializableConsentConfig): void {
+  // Apply the configured localStorage key before any read/write so multiple
+  // Astro apps on the same origin don't clobber each other's consent state.
+  setStorageKey(config.storageKey);
+
   // Resolve UI text once per init: reads <html lang>, merges built-in
   // defaults → config.text → localeText[lang]. Passed to every injectUI call
   // below so reset/show/showPreferences use the same resolved strings.

@@ -47,6 +47,15 @@ export interface ConsentConfig {
   categories: Record<string, ConsentCategory>;
   cookiePolicy?: CookiePolicyLink;
 
+  /**
+   * localStorage key used to persist the consent record. Override this when
+   * multiple Astro apps share a single origin (e.g. `example.com/docs` and
+   * `example.com/app`) to prevent them from clobbering each other's state.
+   *
+   * @default "astro-consent"
+   */
+  storageKey?: string;
+
   /** Single-language text overrides, or shared fallback for `localeText`. */
   text?: ConsentText;
 
@@ -70,6 +79,7 @@ export interface SerializableConsentConfig {
   version: number;
   categories: Record<string, ConsentCategory>;
   cookiePolicy?: CookiePolicyLink;
+  storageKey?: string;
   text?: ConsentText;
   localeText?: Record<string, ConsentText>;
 }
