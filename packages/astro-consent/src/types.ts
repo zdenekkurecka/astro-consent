@@ -19,7 +19,7 @@ export interface ConsentUIConfig {
    *
    * - `"auto"` (default): follows the user's `prefers-color-scheme`.
    * - `"light"` / `"dark"`: forces the palette via a `data-cc-theme`
-   *   attribute on the consent container. Use this to sync the consent
+   *   attribute on the document root. Use this to sync the consent
    *   UI with a site that has its own theme toggle.
    *
    * @default "auto"
@@ -165,7 +165,7 @@ export interface ConsentAPI {
   showPreferences(): void;
   /**
    * Sync the consent UI color scheme with the host site. Sets a
-   * `data-cc-theme` attribute on the consent container so the CSS
+   * `data-cc-theme` attribute on the document root so the CSS
    * variables resolve to the forced palette.
    *
    * Pass `"auto"` to clear the attribute and fall back to the

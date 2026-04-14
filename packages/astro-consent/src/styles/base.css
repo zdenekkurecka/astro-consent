@@ -34,11 +34,12 @@
 
 /* ── Explicit theme overrides via [data-cc-theme] ────────────
  * Set by config `ui.colorMode: "light" | "dark"` or via
- * `window.astroConsent.setTheme()`. Attribute-selector
- * specificity (0,1,0) beats :where(:root) so these always win
- * over the media-query defaults, regardless of source order.
+ * `window.astroConsent.setTheme()`. Wrapped in :where() for
+ * zero specificity so user `:root { --cc-* }` overrides still
+ * win. They beat the media-query defaults via source order
+ * (defined after the @media block below).
  */
-[data-cc-theme='light'] {
+:where([data-cc-theme='light']) {
   --cc-primary: #2563eb;
   --cc-primary-hover: #1d4ed8;
   --cc-bg: #ffffff;
@@ -48,7 +49,7 @@
   --cc-border: #e2e8f0;
 }
 
-[data-cc-theme='dark'] {
+:where([data-cc-theme='dark']) {
   --cc-primary: #3b82f6;
   --cc-primary-hover: #60a5fa;
   --cc-bg: #1e293b;

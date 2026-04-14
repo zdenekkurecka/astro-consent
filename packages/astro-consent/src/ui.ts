@@ -279,16 +279,20 @@ export function injectUI(config: SerializableConsentConfig, text: ResolvedConsen
 }
 
 /**
- * Set or clear `data-cc-theme` on the consent container. Passing `"auto"`
+ * Set or clear `data-cc-theme` on the document root. Passing `"auto"`
  * removes the attribute so the UI follows `prefers-color-scheme`.
+ *
+ * The attribute lives on `:root` (not the consent container) so that
+ * user `--cc-*` overrides on `:root` compete by source order rather
+ * than losing to nearest-ancestor inheritance.
  */
 export function setContainerTheme(mode: 'auto' | 'light' | 'dark'): void {
-  const container = document.getElementById(CONTAINER_ID);
-  if (!container) return;
+  const root = document.documentElement;
+  if (!root) return;
   if (mode === 'auto') {
-    container.removeAttribute('data-cc-theme');
+    root.removeAttribute('data-cc-theme');
   } else {
-    container.setAttribute('data-cc-theme', mode);
+    root.setAttribute('data-cc-theme', mode);
   }
 }
 

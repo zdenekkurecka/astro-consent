@@ -5,6 +5,9 @@ export default defineConfig({
   integrations: [
     cookieConsent({
       version: 1,
+      ui: {
+        colorMode: 'auto',
+      },
       cookiePolicy: {
         url: '/cookie-policy',
         label: 'Cookie Policy',
