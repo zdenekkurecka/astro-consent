@@ -33,8 +33,10 @@ import {
 
 const LOG_PREFIX = '[astro-consent]';
 
-function log(enabled: boolean | undefined, ...args: unknown[]): void {
-  if (!enabled) return;
+let debugEnabled = false;
+
+function log(...args: unknown[]): void {
+  if (!debugEnabled) return;
   // console.debug is filterable separately from .log in DevTools and is
   // stripped by default in Chrome's standard log level.
   console.debug(LOG_PREFIX, ...args);
@@ -53,18 +55,19 @@ let consentFiredThisSession = false;
 function emit(
   type: typeof CONSENT_EVENT | typeof CHANGE_EVENT,
   state: ConsentState,
-  debug?: boolean,
 ): void {
-  log(debug, `emit ${type}`, state);
+  log(`emit ${type}`, state);
   document.dispatchEvent(new CustomEvent(type, { detail: state }));
 }
 
-function persist(state: ConsentState, debug?: boolean): void {
-  log(debug, `localStorage write (${getStorageKey()})`, state);
+function persist(state: ConsentState): void {
+  log(`localStorage write (${getStorageKey()})`, state);
   writeConsent(state);
 }
 
 export function initConsentManager(config: SerializableConsentConfig): void {
+  debugEnabled = config.debug === true;
+
   // Apply the configured localStorage key before any read/write so multiple
   // Astro apps on the same origin don't clobber each other's consent state.
   setStorageKey(config.storageKey);
@@ -80,20 +83,19 @@ export function initConsentManager(config: SerializableConsentConfig): void {
   const initialState = readConsent();
   const initialNeeds = needsConsent(config.version, config.maxAgeDays);
   log(
-    config.debug,
     `init — version: ${config.version}, locale: ${JSON.stringify(resolveLocale(config))}, consent: ${initialState ? 'stored' : 'null'}${initialNeeds ? ' (needs consent)' : ''}`,
     { state: initialState },
   );
 
   // Check consent state.
   if (initialNeeds) {
-    log(config.debug, 'banner shown');
+    log('banner shown');
     showBanner();
   } else if (!consentFiredThisSession) {
     // Fire the consent event once per session (not on every SPA navigation).
     consentFiredThisSession = true;
     if (initialState) {
-      emit(CONSENT_EVENT, initialState, config.debug);
+      emit(CONSENT_EVENT, initialState);
     }
   }
 
@@ -110,25 +112,25 @@ export function initConsentManager(config: SerializableConsentConfig): void {
       switch (action) {
         case 'accept-all':
         case 'modal-accept-all': {
-          log(config.debug, `${action} →`, 'all categories: true');
+          log(`${action} →`, 'all categories: true');
           const state = acceptAll(config);
-          persist(state, config.debug);
+          persist(state);
           hideBanner();
           hideModal();
           consentFiredThisSession = true;
-          emit(CONSENT_EVENT, state, config.debug);
+          emit(CONSENT_EVENT, state);
           break;
         }
 
         case 'reject-all':
         case 'modal-reject-all': {
-          log(config.debug, `${action} →`, 'non-essential categories: false');
+          log(`${action} →`, 'non-essential categories: false');
           const state = rejectAll(config);
-          persist(state, config.debug);
+          persist(state);
           hideBanner();
           hideModal();
           consentFiredThisSession = true;
-          emit(CONSENT_EVENT, state, config.debug);
+          emit(CONSENT_EVENT, state);
           break;
         }
 
@@ -153,12 +155,12 @@ export function initConsentManager(config: SerializableConsentConfig): void {
         case 'save-preferences': {
           const selections = getModalSelections();
           const isUpdate = !needsConsent(config.version, config.maxAgeDays);
-          log(config.debug, `save-preferences →`, selections, isUpdate ? '(update)' : '(initial)');
+          log(`save-preferences →`, selections, isUpdate ? '(update)' : '(initial)');
           const state = savePreferences(config, selections);
-          persist(state, config.debug);
+          persist(state);
           hideModal();
           consentFiredThisSession = true;
-          emit(isUpdate ? CHANGE_EVENT : CONSENT_EVENT, state, config.debug);
+          emit(isUpdate ? CHANGE_EVENT : CONSENT_EVENT, state);
           break;
         }
 
@@ -234,20 +236,20 @@ export function initConsentManager(config: SerializableConsentConfig): void {
         timestamp: Date.now(),
         categories: baseCategories,
       };
-      log(config.debug, 'api.set →', categories);
-      persist(state, config.debug);
+      log('api.set →', categories);
+      persist(state);
       // If this is the first consent record, the banner should disappear and
       // a CONSENT_EVENT should fire (not CHANGE_EVENT).
       if (!current) {
         hideBanner();
         consentFiredThisSession = true;
-        emit(CONSENT_EVENT, state, config.debug);
+        emit(CONSENT_EVENT, state);
       } else {
-        emit(CHANGE_EVENT, state, config.debug);
+        emit(CHANGE_EVENT, state);
       }
     },
     reset: () => {
-      log(config.debug, 'api.reset — clearing stored consent');
+      log('api.reset — clearing stored consent');
       clearConsent();
       injectUI(config, text);
       showBanner();
@@ -260,7 +262,7 @@ export function initConsentManager(config: SerializableConsentConfig): void {
       // Make sure the container exists so the attribute has somewhere to
       // live on first call (e.g. before the banner has ever been shown).
       injectUI(config, text);
-      log(config.debug, `api.setTheme →`, mode);
+      log(`api.setTheme →`, mode);
       setContainerTheme(mode);
     },
     showPreferences: () => {
