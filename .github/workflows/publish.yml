@@ -90,7 +90,45 @@ jobs:
           publish: pnpm release
           title: 'chore(release): version packages'
           commit: 'chore(release): version packages'
-          createGithubReleases: true
+          # We create tags + GitHub Releases ourselves in the next step so the
+          # naming matches the legacy `astro-consent-vX.Y.Z` style instead of
+          # the monorepo-default `@zdenekkurecka/astro-consent@X.Y.Z`.
+          createGithubReleases: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: 'true'
+
+      - name: Rename tags and create GitHub Releases
+        if: steps.changesets.outputs.published == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PUBLISHED_PACKAGES: ${{ steps.changesets.outputs.publishedPackages }}
+        run: |
+          set -euo pipefail
+          echo "$PUBLISHED_PACKAGES" | jq -c '.[]' | while read -r pkg; do
+            name=$(echo "$pkg" | jq -r '.name')
+            version=$(echo "$pkg" | jq -r '.version')
+            short="${name##*/}"
+            new_tag="${short}-v${version}"
+            old_tag="${name}@${version}"
+
+            echo "Renaming $old_tag → $new_tag"
+
+            # Create the pretty tag on the same commit and push it.
+            git tag "$new_tag" "$old_tag"
+            git push origin "refs/tags/$new_tag"
+
+            # Remove the ugly tag from origin (local copy is ephemeral).
+            git push origin ":refs/tags/$old_tag" || true
+
+            # Extract just this version's section from the package CHANGELOG.
+            notes=$(awk -v ver="$version" '
+              $0 == "## " ver { inblock = 1; next }
+              inblock && /^## / { exit }
+              inblock { print }
+            ' "packages/${short}/CHANGELOG.md")
+
+            gh release create "$new_tag" \
+              --title "$new_tag" \
+              --notes "$notes"
+          done
