@@ -2,11 +2,31 @@ import type { AstroIntegration } from 'astro';
 import type { ConsentConfig, SerializableConsentConfig } from './types.js';
 import { vitePluginConsentConfig } from './virtual-config.js';
 
-export default function cookieConsent(userConfig: ConsentConfig): AstroIntegration {
+export default function cookieConsent(userConfig?: ConsentConfig): AstroIntegration {
+  if (
+    !userConfig ||
+    typeof userConfig.version !== 'number' ||
+    !userConfig.categories ||
+    typeof userConfig.categories !== 'object' ||
+    Object.keys(userConfig.categories).length === 0
+  ) {
+    throw new Error(
+      '[@zdenekkurecka/astro-consent] Missing required config. ' +
+        '`cookieConsent()` requires a `version` (number) and a non-empty `categories` map. ' +
+        'If you used `astro add`, open astro.config.* and replace `cookieConsent()` with a call that passes at least ' +
+        '`{ version: 1, categories: { analytics: { label: "Analytics", description: "…", default: false } } }`. ' +
+        'See https://github.com/zdenekkurecka/astro-consent#quick-start',
+    );
+  }
+
   const serializableConfig: SerializableConsentConfig = {
     version: userConfig.version,
     categories: userConfig.categories,
     cookiePolicy: userConfig.cookiePolicy,
+    storageKey: userConfig.storageKey,
+    maxAgeDays: userConfig.maxAgeDays,
+    debug: userConfig.debug,
+    ui: userConfig.ui,
     text: userConfig.text,
     localeText: userConfig.localeText,
   };

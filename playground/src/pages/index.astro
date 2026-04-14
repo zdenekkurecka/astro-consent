@@ -33,7 +33,7 @@ import Layout from '../layouts/Layout.astro';
   <script>
     function refreshState() {
       const el = document.getElementById('state');
-      const consent = window.zdenekkureckaConsent;
+      const consent = window.astroConsent;
       if (el && consent) {
         const state = consent.get();
         el.textContent = state ? JSON.stringify(state, null, 2) : 'No consent data yet.';
@@ -56,15 +56,15 @@ import Layout from '../layouts/Layout.astro';
       refreshState();
 
       document.getElementById('btn-show')?.addEventListener('click', () => {
-        window.zdenekkureckaConsent?.show();
+        window.astroConsent?.show();
       });
 
       document.getElementById('btn-prefs')?.addEventListener('click', () => {
-        window.zdenekkureckaConsent?.showPreferences();
+        window.astroConsent?.showPreferences();
       });
 
       document.getElementById('btn-reset')?.addEventListener('click', () => {
-        window.zdenekkureckaConsent?.reset();
+        window.astroConsent?.reset();
         refreshState();
       });
 

@@ -9,6 +9,24 @@ export interface CookiePolicyLink {
   label?: string;
 }
 
+/** Color mode for the consent UI. */
+export type ConsentColorMode = 'auto' | 'light' | 'dark';
+
+/** Visual/UI-level configuration for the consent banner and modal. */
+export interface ConsentUIConfig {
+  /**
+   * Controls the color scheme of the consent UI.
+   *
+   * - `"auto"` (default): follows the user's `prefers-color-scheme`.
+   * - `"light"` / `"dark"`: forces the palette via a `data-cc-theme`
+   *   attribute on the document root. Use this to sync the consent
+   *   UI with a site that has its own theme toggle.
+   *
+   * @default "auto"
+   */
+  colorMode?: ConsentColorMode;
+}
+
 /** Per-category label/description override used in `ConsentText.categories`. */
 export interface ConsentCategoryText {
   label?: string;
@@ -47,6 +65,39 @@ export interface ConsentConfig {
   categories: Record<string, ConsentCategory>;
   cookiePolicy?: CookiePolicyLink;
 
+  /**
+   * localStorage key used to persist the consent record. Override this when
+   * multiple Astro apps share a single origin (e.g. `example.com/docs` and
+   * `example.com/app`) to prevent them from clobbering each other's state.
+   *
+   * @default "astro-consent"
+   */
+  storageKey?: string;
+
+  /**
+   * Maximum age of a stored consent record, in days. When set, consent older
+   * than this is treated as missing and the banner is re-shown. Useful for
+   * aligning with GDPR/DPA guidance that recommends re-prompting every 6–12
+   * months.
+   *
+   * @default undefined (no expiry)
+   */
+  maxAgeDays?: number;
+
+  /**
+   * Enables verbose `console.debug` logging of runtime events (init, banner
+   * show, accept/reject/save, event dispatch, storage writes) and exposes
+   * `window.astroConsent.debug()` for an on-demand state dump. Intended for
+   * local development; gate behind `import.meta.env.DEV` so it never ships
+   * to production.
+   *
+   * @default false
+   */
+  debug?: boolean;
+
+  /** Visual/UI configuration (color mode, etc.). */
+  ui?: ConsentUIConfig;
+
   /** Single-language text overrides, or shared fallback for `localeText`. */
   text?: ConsentText;
 
@@ -70,8 +121,27 @@ export interface SerializableConsentConfig {
   version: number;
   categories: Record<string, ConsentCategory>;
   cookiePolicy?: CookiePolicyLink;
+  storageKey?: string;
+  maxAgeDays?: number;
+  debug?: boolean;
+  ui?: ConsentUIConfig;
   text?: ConsentText;
   localeText?: Record<string, ConsentText>;
+}
+
+/**
+ * Snapshot returned by `ConsentAPI.debug()` when `debug: true`. Captures the
+ * fully-resolved runtime state so developers can inspect what the integration
+ * sees without digging through localStorage or reading source.
+ */
+export interface ConsentDebugSnapshot {
+  config: SerializableConsentConfig;
+  resolvedLocale: string | null;
+  resolvedText: Record<string, unknown>;
+  storageKey: string;
+  state: ConsentState | null;
+  versionMatch: boolean;
+  needsConsent: boolean;
 }
 
 export interface ConsentAPI {
@@ -93,6 +163,21 @@ export interface ConsentAPI {
   show(): void;
   /** Open the preferences modal. */
   showPreferences(): void;
+  /**
+   * Sync the consent UI color scheme with the host site. Sets a
+   * `data-cc-theme` attribute on the document root so the CSS
+   * variables resolve to the forced palette.
+   *
+   * Pass `"auto"` to clear the attribute and fall back to the
+   * `prefers-color-scheme` defaults.
+   */
+  setTheme(mode: ConsentColorMode): void;
+  /**
+   * Dumps a `console.group` with the current config, resolved locale/text,
+   * storage key, and stored state, and returns the same snapshot. Only
+   * attached when the integration is configured with `debug: true`.
+   */
+  debug?(): ConsentDebugSnapshot;
 }
 
 /**
@@ -122,6 +207,8 @@ declare global {
   }
 
   interface Window {
+    astroConsent?: ConsentAPI;
+    /** @deprecated Use `astroConsent` instead. */
     zdenekkureckaConsent?: ConsentAPI;
   }
 }

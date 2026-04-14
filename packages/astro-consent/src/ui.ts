@@ -66,6 +66,23 @@ function mergeText(base: ResolvedConsentText, layer: ConsentText | undefined): R
 }
 
 /**
+ * Resolve which entry in `config.localeText` would apply for the current
+ * `<html lang>`, returning the tag that matched (exact or primary subtag), or
+ * `null` if there is no match / no localeText configured. Used by the debug
+ * helper so developers can see why a particular string layer was picked.
+ */
+export function resolveLocale(config: SerializableConsentConfig): string | null {
+  const localeText = config.localeText;
+  if (!localeText) return null;
+  const lang = (document.documentElement.lang || '').trim();
+  if (!lang) return null;
+  if (localeText[lang]) return lang;
+  const primary = lang.split('-')[0];
+  if (primary && primary !== lang && localeText[primary]) return primary;
+  return null;
+}
+
+/**
  * Resolve the UI text layers for the current document.
  *
  * Reads `document.documentElement.lang`, picks the best match from
@@ -252,6 +269,31 @@ export function injectUI(config: SerializableConsentConfig, text: ResolvedConsen
   container.id = CONTAINER_ID;
   container.innerHTML = createBannerHTML(config, text) + createModalHTML(config, text);
   document.body.appendChild(container);
+
+  // Apply forced color mode (if any). "auto" / undefined leaves the
+  // attribute unset so the CSS falls back to prefers-color-scheme.
+  const mode = config.ui?.colorMode;
+  if (mode === 'light' || mode === 'dark') {
+    setContainerTheme(mode);
+  }
+}
+
+/**
+ * Set or clear `data-cc-theme` on the document root. Passing `"auto"`
+ * removes the attribute so the UI follows `prefers-color-scheme`.
+ *
+ * The attribute lives on `:root` (not the consent container) so that
+ * user `--cc-*` overrides on `:root` compete by source order rather
+ * than losing to nearest-ancestor inheritance.
+ */
+export function setContainerTheme(mode: 'auto' | 'light' | 'dark'): void {
+  const root = document.documentElement;
+  if (!root) return;
+  if (mode === 'auto') {
+    root.removeAttribute('data-cc-theme');
+  } else {
+    root.setAttribute('data-cc-theme', mode);
+  }
 }
 
 export function showBanner(): void {

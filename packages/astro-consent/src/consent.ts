@@ -1,6 +1,15 @@
 import type { ConsentState, SerializableConsentConfig } from './types.js';
 
-const STORAGE_KEY = 'astro-consent';
+const DEFAULT_STORAGE_KEY = 'astro-consent';
+let STORAGE_KEY: string = DEFAULT_STORAGE_KEY;
+
+export function setStorageKey(key: string | undefined): void {
+  STORAGE_KEY = key || DEFAULT_STORAGE_KEY;
+}
+
+export function getStorageKey(): string {
+  return STORAGE_KEY;
+}
 
 export function readConsent(): ConsentState | null {
   try {
@@ -28,9 +37,14 @@ export function clearConsent(): void {
   }
 }
 
-export function needsConsent(configVersion: number): boolean {
+export function needsConsent(configVersion: number, maxAgeDays?: number): boolean {
   const state = readConsent();
-  return !state || state.version < configVersion;
+  if (!state || state.version < configVersion) return true;
+  if (maxAgeDays !== undefined) {
+    const ageMs = Date.now() - state.timestamp;
+    if (ageMs > maxAgeDays * 86_400_000) return true;
+  }
+  return false;
 }
 
 export function acceptAll(config: SerializableConsentConfig): ConsentState {

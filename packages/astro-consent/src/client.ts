@@ -1,4 +1,9 @@
-import type { ConsentState, SerializableConsentConfig, ConsentAPI } from './types.js';
+import type {
+  ConsentState,
+  SerializableConsentConfig,
+  ConsentAPI,
+  ConsentDebugSnapshot,
+} from './types.js';
 import { CONSENT_EVENT, CHANGE_EVENT } from './types.js';
 import {
   readConsent,
@@ -8,10 +13,14 @@ import {
   acceptAll,
   rejectAll,
   savePreferences,
+  setStorageKey,
+  getStorageKey,
 } from './consent.js';
 import {
   injectUI,
   resolveText,
+  resolveLocale,
+  setContainerTheme,
   showBanner,
   hideBanner,
   showModal,
@@ -21,6 +30,17 @@ import {
   updateModalToggles,
   handleModalTabTrap,
 } from './ui.js';
+
+const LOG_PREFIX = '[astro-consent]';
+
+let debugEnabled = false;
+
+function log(...args: unknown[]): void {
+  if (!debugEnabled) return;
+  // console.debug is filterable separately from .log in DevTools and is
+  // stripped by default in Chrome's standard log level.
+  console.debug(LOG_PREFIX, ...args);
+}
 
 let listenerAttached = false;
 let consentFiredThisSession = false;
@@ -32,11 +52,26 @@ let consentFiredThisSession = false;
  * and reference outer scope — none of which works when a callback is
  * serialized with `Function.prototype.toString`.
  */
-function emit(type: typeof CONSENT_EVENT | typeof CHANGE_EVENT, state: ConsentState): void {
+function emit(
+  type: typeof CONSENT_EVENT | typeof CHANGE_EVENT,
+  state: ConsentState,
+): void {
+  log(`emit ${type}`, state);
   document.dispatchEvent(new CustomEvent(type, { detail: state }));
 }
 
+function persist(state: ConsentState): void {
+  log(`localStorage write (${getStorageKey()})`, state);
+  writeConsent(state);
+}
+
 export function initConsentManager(config: SerializableConsentConfig): void {
+  debugEnabled = config.debug === true;
+
+  // Apply the configured localStorage key before any read/write so multiple
+  // Astro apps on the same origin don't clobber each other's consent state.
+  setStorageKey(config.storageKey);
+
   // Resolve UI text once per init: reads <html lang>, merges built-in
   // defaults → config.text → localeText[lang]. Passed to every injectUI call
   // below so reset/show/showPreferences use the same resolved strings.
@@ -45,15 +80,22 @@ export function initConsentManager(config: SerializableConsentConfig): void {
   // Inject banner + modal DOM (idempotent).
   injectUI(config, text);
 
+  const initialState = readConsent();
+  const initialNeeds = needsConsent(config.version, config.maxAgeDays);
+  log(
+    `init — version: ${config.version}, locale: ${JSON.stringify(resolveLocale(config))}, consent: ${initialState ? 'stored' : 'null'}${initialNeeds ? ' (needs consent)' : ''}`,
+    { state: initialState },
+  );
+
   // Check consent state.
-  if (needsConsent(config.version)) {
+  if (initialNeeds) {
+    log('banner shown');
     showBanner();
   } else if (!consentFiredThisSession) {
     // Fire the consent event once per session (not on every SPA navigation).
     consentFiredThisSession = true;
-    const existing = readConsent();
-    if (existing) {
-      emit(CONSENT_EVENT, existing);
+    if (initialState) {
+      emit(CONSENT_EVENT, initialState);
     }
   }
 
@@ -70,8 +112,9 @@ export function initConsentManager(config: SerializableConsentConfig): void {
       switch (action) {
         case 'accept-all':
         case 'modal-accept-all': {
+          log(`${action} →`, 'all categories: true');
           const state = acceptAll(config);
-          writeConsent(state);
+          persist(state);
           hideBanner();
           hideModal();
           consentFiredThisSession = true;
@@ -81,8 +124,9 @@ export function initConsentManager(config: SerializableConsentConfig): void {
 
         case 'reject-all':
         case 'modal-reject-all': {
+          log(`${action} →`, 'non-essential categories: false');
           const state = rejectAll(config);
-          writeConsent(state);
+          persist(state);
           hideBanner();
           hideModal();
           consentFiredThisSession = true;
@@ -110,9 +154,10 @@ export function initConsentManager(config: SerializableConsentConfig): void {
 
         case 'save-preferences': {
           const selections = getModalSelections();
-          const isUpdate = !needsConsent(config.version);
+          const isUpdate = !needsConsent(config.version, config.maxAgeDays);
+          log(`save-preferences →`, selections, isUpdate ? '(update)' : '(initial)');
           const state = savePreferences(config, selections);
-          writeConsent(state);
+          persist(state);
           hideModal();
           consentFiredThisSession = true;
           emit(isUpdate ? CHANGE_EVENT : CONSENT_EVENT, state);
@@ -122,7 +167,7 @@ export function initConsentManager(config: SerializableConsentConfig): void {
         case 'close-modal': {
           hideModal();
           // Re-show banner if consent hasn't been given yet.
-          if (needsConsent(config.version)) {
+          if (needsConsent(config.version, config.maxAgeDays)) {
             showBanner();
           }
           break;
@@ -143,7 +188,7 @@ export function initConsentManager(config: SerializableConsentConfig): void {
     document.addEventListener('click', (e) => {
       if ((e.target as HTMLElement).id === 'cc-overlay') {
         hideModal();
-        if (needsConsent(config.version)) {
+        if (needsConsent(config.version, config.maxAgeDays)) {
           showBanner();
         }
       }
@@ -155,7 +200,7 @@ export function initConsentManager(config: SerializableConsentConfig): void {
 
       if (e.key === 'Escape') {
         hideModal();
-        if (needsConsent(config.version)) {
+        if (needsConsent(config.version, config.maxAgeDays)) {
           showBanner();
         }
         return;
@@ -191,7 +236,8 @@ export function initConsentManager(config: SerializableConsentConfig): void {
         timestamp: Date.now(),
         categories: baseCategories,
       };
-      writeConsent(state);
+      log('api.set →', categories);
+      persist(state);
       // If this is the first consent record, the banner should disappear and
       // a CONSENT_EVENT should fire (not CHANGE_EVENT).
       if (!current) {
@@ -203,6 +249,7 @@ export function initConsentManager(config: SerializableConsentConfig): void {
       }
     },
     reset: () => {
+      log('api.reset — clearing stored consent');
       clearConsent();
       injectUI(config, text);
       showBanner();
@@ -210,6 +257,13 @@ export function initConsentManager(config: SerializableConsentConfig): void {
     show: () => {
       injectUI(config, text);
       showBanner();
+    },
+    setTheme: (mode) => {
+      // Make sure the container exists so the attribute has somewhere to
+      // live on first call (e.g. before the banner has ever been shown).
+      injectUI(config, text);
+      log(`api.setTheme →`, mode);
+      setContainerTheme(mode);
     },
     showPreferences: () => {
       injectUI(config, text);
@@ -228,5 +282,32 @@ export function initConsentManager(config: SerializableConsentConfig): void {
     },
   };
 
+  if (config.debug) {
+    api.debug = (): ConsentDebugSnapshot => {
+      const state = readConsent();
+      const snapshot: ConsentDebugSnapshot = {
+        config,
+        resolvedLocale: resolveLocale(config),
+        resolvedText: text as unknown as Record<string, unknown>,
+        storageKey: getStorageKey(),
+        state,
+        versionMatch: state ? state.version === config.version : false,
+        needsConsent: needsConsent(config.version, config.maxAgeDays),
+      };
+      // eslint-disable-next-line no-console
+      console.group(`${LOG_PREFIX} debug snapshot`);
+      console.log('config', snapshot.config);
+      console.log('resolvedLocale', snapshot.resolvedLocale);
+      console.log('resolvedText', snapshot.resolvedText);
+      console.log('storageKey', snapshot.storageKey);
+      console.log('state', snapshot.state);
+      console.log('versionMatch', snapshot.versionMatch);
+      console.log('needsConsent', snapshot.needsConsent);
+      console.groupEnd();
+      return snapshot;
+    };
+  }
+
+  window.astroConsent = api;
   window.zdenekkureckaConsent = api;
 }
