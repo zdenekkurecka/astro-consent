@@ -66,15 +66,6 @@ function mergeText(base: ResolvedConsentText, layer: ConsentText | undefined): R
 }
 
 /**
- * Resolve the UI text layers for the current document.
- *
- * Reads `document.documentElement.lang`, picks the best match from
- * `config.localeText` (exact tag → primary subtag), and deep-merges the
- * layers: built-in defaults → `config.text` → resolved locale entry. Partial
- * overrides compose correctly — callers only need to supply the keys they
- * want to change.
- */
-/**
  * Resolve which entry in `config.localeText` would apply for the current
  * `<html lang>`, returning the tag that matched (exact or primary subtag), or
  * `null` if there is no match / no localeText configured. Used by the debug
@@ -91,6 +82,15 @@ export function resolveLocale(config: SerializableConsentConfig): string | null 
   return null;
 }
 
+/**
+ * Resolve the UI text layers for the current document.
+ *
+ * Reads `document.documentElement.lang`, picks the best match from
+ * `config.localeText` (exact tag → primary subtag), and deep-merges the
+ * layers: built-in defaults → `config.text` → resolved locale entry. Partial
+ * overrides compose correctly — callers only need to supply the keys they
+ * want to change.
+ */
 export function resolveText(config: SerializableConsentConfig): ResolvedConsentText {
   let resolved = mergeText(BUILT_IN_DEFAULTS, config.text);
 
