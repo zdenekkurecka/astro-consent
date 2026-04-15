@@ -7,14 +7,22 @@
     "build:all": "pnpm -r build",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "pnpm --filter @zdenekkurecka/astro-consent build && changeset publish"
+    "release": "pnpm --filter @zdenekkurecka/astro-consent build && changeset publish",
+    "test": "playwright test",
+    "test:ui": "playwright test --ui",
+    "test:chromium": "playwright test --project=chromium"
   },
   "packageManager": "pnpm@10.8.1",
   "devDependencies": {
     "@changesets/changelog-github": "^0.5.0",
-    "@changesets/cli": "^2.27.9"
+    "@changesets/cli": "^2.27.9",
+    "@playwright/test": "^1.59.1"
   },
   "pnpm": {
-    "onlyBuiltDependencies": ["@parcel/watcher", "esbuild", "sharp"]
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "esbuild",
+      "sharp"
+    ]
   }
 }
