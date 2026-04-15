@@ -184,9 +184,12 @@ export function initConsentManager(config: SerializableConsentConfig): void {
       }
     });
 
-    // Close modal on overlay click.
+    // Close modal on backdrop click. The `.cc-modal` wrapper spans the full
+    // viewport and sits above `.cc-overlay`, so a click on the dimmed area
+    // lands on `#cc-modal` itself rather than `#cc-overlay`. Clicks inside
+    // `.cc-modal-inner` bubble up with a different target and are ignored.
     document.addEventListener('click', (e) => {
-      if ((e.target as HTMLElement).id === 'cc-overlay') {
+      if ((e.target as HTMLElement).id === 'cc-modal') {
         hideModal();
         if (needsConsent(config.version, config.maxAgeDays)) {
           showBanner();

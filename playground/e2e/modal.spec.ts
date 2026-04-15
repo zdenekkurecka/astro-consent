@@ -30,15 +30,13 @@ test.describe('Preferences modal', () => {
     await expectModalVisible(page, false);
   });
 
-  test('overlay click closes modal', async ({ page }) => {
+  test('backdrop click closes modal', async ({ page }) => {
     await page.locator('[data-cc=manage]').click();
     await expectModalVisible(page, true);
 
-    // The .cc-modal element fully covers the viewport and sits above
-    // .cc-overlay in the z-stack, so a real viewport click lands on the
-    // modal. Dispatch the click directly on the overlay element so the
-    // handler's `e.target.id === 'cc-overlay'` check fires.
-    await page.evaluate(() => document.getElementById('cc-overlay')?.click());
+    // Click the dimmed area outside .cc-modal-inner. .cc-modal spans the
+    // full viewport, so a click near the corner lands on the backdrop.
+    await page.locator('#cc-modal').click({ position: { x: 5, y: 5 } });
     await expectModalVisible(page, false);
   });
 
