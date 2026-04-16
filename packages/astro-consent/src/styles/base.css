@@ -10,7 +10,8 @@
   --cc-text: #0f172a;
   --cc-text-muted: #64748b;
   --cc-border: #e2e8f0;
-  --cc-radius: 0.5rem;
+  --cc-radius: 1rem;
+  --cc-radius-btn: 9999px;
   --cc-font-family: inherit;
 }
 
@@ -117,7 +118,7 @@
   position: fixed;
   inset: 0;
   z-index: 10000;
-  background-color: rgba(0, 0, 0, 0.4);
+  background-color: rgba(0, 0, 0, 0.8);
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s ease;
@@ -151,7 +152,6 @@
 
 .cc-modal-inner {
   background-color: var(--cc-bg);
-  border: 1px solid var(--cc-border);
   border-radius: var(--cc-radius);
   width: 100%;
   max-width: 32rem;
@@ -180,14 +180,21 @@
 .cc-modal-close {
   background: none;
   border: none;
-  font-size: 1.5rem;
-  line-height: 1;
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   color: var(--cc-text-muted);
-  padding: 0.25rem;
+  padding: 0;
+  margin-right: -10px;
+  transition: background-color 0.15s ease;
 }
 
 .cc-modal-close:hover {
+  background-color: var(--cc-surface);
   color: var(--cc-text);
 }
 
@@ -299,7 +306,7 @@
   font-weight: 500;
   font-family: var(--cc-font-family);
   line-height: 1.5;
-  border-radius: var(--cc-radius);
+  border-radius: var(--cc-radius-btn);
   border: 1px solid transparent;
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;

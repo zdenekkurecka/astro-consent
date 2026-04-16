@@ -246,7 +246,7 @@ function createModalHTML(config: SerializableConsentConfig, text: ResolvedConsen
       <div class="cc-modal-inner">
         <div class="cc-modal-header">
           <h2 class="cc-modal-title" id="${MODAL_TITLE_ID}">${escapeHtml(text.modalTitle)}</h2>
-          <button type="button" class="cc-modal-close" data-cc="close-modal" aria-label="${escapeHtml(text.closeAriaLabel)}">&times;</button>
+          <button type="button" class="cc-modal-close" data-cc="close-modal" aria-label="${escapeHtml(text.closeAriaLabel)}"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="2" y1="2" x2="10" y2="10"/><line x1="10" y1="2" x2="2" y2="10"/></svg></button>
         </div>
         <div class="cc-modal-body">
           ${essentialToggle}
