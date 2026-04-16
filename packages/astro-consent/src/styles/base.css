@@ -410,3 +410,28 @@
   outline: 2px solid var(--cc-primary);
   outline-offset: 2px;
 }
+
+/* ── Mobile (≤ 480px) ───────────────────────────────────── */
+/* Two actions share the top row; third button spans full-width below. */
+
+@media (max-width: 480px) {
+  .cc-banner-actions,
+  .cc-modal-footer {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+
+  .cc-banner-actions {
+    width: 100%;
+  }
+
+  .cc-banner-actions > :nth-child(3),
+  .cc-modal-footer > :nth-child(3) {
+    grid-column: 1 / -1;
+  }
+
+  .cc-modal-footer [data-cc='save-preferences'] {
+    margin-left: 0;
+  }
+}
