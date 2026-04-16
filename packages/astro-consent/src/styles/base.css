@@ -7,10 +7,11 @@
   --cc-primary-hover: #1d4ed8;
   --cc-bg: #ffffff;
   --cc-surface: #f8fafc;
+  --cc-tint-rgb: 0, 0, 0;
   --cc-text: #0f172a;
   --cc-text-muted: #64748b;
   --cc-border: #e2e8f0;
-  --cc-radius: 1rem;
+  --cc-radius: 1.5rem;
   --cc-radius-pill: 9999px;
   --cc-font-family: inherit;
 }
@@ -27,6 +28,7 @@
     --cc-primary-hover: #60a5fa;
     --cc-bg: #1e293b;
     --cc-surface: #334155;
+    --cc-tint-rgb: 255, 255, 255;
     --cc-text: #f1f5f9;
     --cc-text-muted: #94a3b8;
     --cc-border: #475569;
@@ -45,6 +47,7 @@
   --cc-primary-hover: #1d4ed8;
   --cc-bg: #ffffff;
   --cc-surface: #f8fafc;
+  --cc-tint-rgb: 0, 0, 0;
   --cc-text: #0f172a;
   --cc-text-muted: #64748b;
   --cc-border: #e2e8f0;
@@ -55,6 +58,7 @@
   --cc-primary-hover: #60a5fa;
   --cc-bg: #1e293b;
   --cc-surface: #334155;
+  --cc-tint-rgb: 255, 255, 255;
   --cc-text: #f1f5f9;
   --cc-text-muted: #94a3b8;
   --cc-border: #475569;
@@ -192,12 +196,12 @@
 }
 
 .cc-modal-close:hover {
-  background-color: var(--cc-surface);
+  background-color: rgba(var(--cc-tint-rgb), 0.06);
   color: var(--cc-text);
 }
 
 .cc-modal-body {
-  padding: 1rem 1.5rem;
+  padding: 1rem 1.5rem 1.5rem;
   overflow-y: auto;
   flex: 1 1 auto;
 }
@@ -205,8 +209,8 @@
 .cc-modal-footer {
   display: flex;
   gap: 0.5rem;
-  padding: 1rem 1.5rem;
-  border-top: 1px solid var(--cc-border);
+  padding: 1.5rem;
+  border-top: 1px solid rgba(var(--cc-tint-rgb), 0.08);
   flex-wrap: wrap;
 }
 
@@ -218,7 +222,7 @@
 
 .cc-category {
   padding: 0.875rem 1rem;
-  background-color: var(--cc-surface);
+  background-color: rgba(var(--cc-tint-rgb), 0.02);
   border-radius: 0.75rem;
 }
 
@@ -380,7 +384,7 @@
 }
 
 .cc-modal-policy-bar {
-  background-color: var(--cc-surface);
+  background-color: rgba(var(--cc-tint-rgb), 0.06);
   display: flex;
   align-items: center;
   justify-content: center;
