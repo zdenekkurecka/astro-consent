@@ -2,7 +2,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "pnpm --filter @zdenekkurecka/astro-consent build && pnpm --filter playground dev",
+    "dev": "pnpm --filter @zdenekkurecka/astro-consent build && node scripts/dev-parallel.mjs 'ts=pnpm --filter @zdenekkurecka/astro-consent run dev' 'css=pnpm --filter @zdenekkurecka/astro-consent run dev:css' 'play=pnpm --filter playground dev'",
     "build": "pnpm --filter @zdenekkurecka/astro-consent build && pnpm --filter playground build",
     "build:all": "pnpm -r build",
     "changeset": "changeset",

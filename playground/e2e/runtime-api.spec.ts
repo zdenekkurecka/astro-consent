@@ -13,9 +13,9 @@ test.describe('Runtime API', () => {
     expect(state).toBeNull();
   });
 
-  test('set() creates initial consent from defaults', async ({ page }) => {
+  test('set() creates initial consent from explicit values', async ({ page }) => {
     await page.evaluate(() => {
-      window.astroConsent?.set({ analytics: true });
+      window.astroConsent?.set({ analytics: true, marketing: false });
     });
 
     const state = await getConsentAPI(page);
