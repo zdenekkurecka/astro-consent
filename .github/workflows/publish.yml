@@ -98,41 +98,80 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_CONFIG_PROVENANCE: 'true'
 
-      - name: Rename tags and create GitHub Releases
-        if: steps.changesets.outputs.published == 'true'
+      - name: Reconcile tags and GitHub Releases
+        # Always runs so a rerun can recover from a transient failure in any
+        # of the substeps below, even when changesets-action reports nothing
+        # new published (e.g. the npm publish already succeeded last time).
+        # Each operation is idempotent — missing artefacts are created, and
+        # everything else is a no-op.
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PUBLISHED_PACKAGES: ${{ steps.changesets.outputs.publishedPackages }}
         run: |
           set -euo pipefail
-          # changesets-action pushed the default `@scope/name@version` tags
-          # to origin, but they may not be present in this checkout's local
-          # refs. Fetch them so `git tag <new> <old>` can resolve <old>.
           git fetch --tags origin
-          echo "$PUBLISHED_PACKAGES" | jq -c '.[]' | while read -r pkg; do
+
+          # Prefer the list of packages changesets just published. Fall back
+          # to the workspace package.json so a rerun (where published=false)
+          # can still reconcile missing tags/releases against npm.
+          if [ -n "${PUBLISHED_PACKAGES:-}" ] && [ "$PUBLISHED_PACKAGES" != "[]" ]; then
+            packages="$PUBLISHED_PACKAGES"
+          else
+            packages=$(jq -c '{name: .name, version: .version}' packages/astro-consent/package.json | jq -sc '.')
+          fi
+
+          echo "$packages" | jq -c '.[]' | while read -r pkg; do
             name=$(echo "$pkg" | jq -r '.name')
             version=$(echo "$pkg" | jq -r '.version')
             short="${name##*/}"
             new_tag="${short}-v${version}"
             old_tag="${name}@${version}"
 
-            echo "Renaming $old_tag → $new_tag"
+            # Only reconcile versions actually on npm. Avoids creating tags
+            # for a version bump whose publish step failed.
+            if ! npm view "${name}@${version}" version >/dev/null 2>&1; then
+              echo "Skip ${name}@${version}: not published to npm yet"
+              continue
+            fi
 
-            # Create the pretty tag on the same commit and push it.
-            git tag "$new_tag" "$old_tag"
-            git push origin "refs/tags/$new_tag"
+            # --- tag ---
+            if git ls-remote --exit-code --tags origin "refs/tags/${new_tag}" >/dev/null 2>&1; then
+              echo "Tag ${new_tag} already on origin — skip"
+            else
+              # Point the new tag at whichever ref exists locally: the scoped
+              # tag pushed by changesets-action, or HEAD as a last resort.
+              if git rev-parse --verify "refs/tags/${old_tag}" >/dev/null 2>&1; then
+                git tag -f "${new_tag}" "${old_tag}"
+              else
+                git tag -f "${new_tag}" HEAD
+              fi
+              # Retry transient push failures (e.g. GitHub 5xx).
+              for attempt in 1 2 3 4 5; do
+                if git push origin "refs/tags/${new_tag}"; then
+                  break
+                fi
+                if [ "$attempt" = 5 ]; then
+                  echo "Failed to push ${new_tag} after 5 attempts" >&2
+                  exit 1
+                fi
+                sleep $((attempt * 5))
+              done
+            fi
 
-            # Remove the ugly tag from origin (local copy is ephemeral).
-            git push origin ":refs/tags/$old_tag" || true
+            # Remove the scoped tag from origin if it's still there.
+            git push origin ":refs/tags/${old_tag}" || true
 
-            # Extract just this version's section from the package CHANGELOG.
-            notes=$(awk -v ver="$version" '
-              $0 == "## " ver { inblock = 1; next }
-              inblock && /^## / { exit }
-              inblock { print }
-            ' "packages/${short}/CHANGELOG.md")
-
-            gh release create "$new_tag" \
-              --title "$new_tag" \
-              --notes "$notes"
+            # --- release ---
+            if gh release view "${new_tag}" >/dev/null 2>&1; then
+              echo "Release ${new_tag} already exists — skip"
+            else
+              notes=$(awk -v ver="$version" '
+                $0 == "## " ver { inblock = 1; next }
+                inblock && /^## / { exit }
+                inblock { print }
+              ' "packages/${short}/CHANGELOG.md")
+              gh release create "${new_tag}" \
+                --title "${new_tag}" \
+                --notes "$notes"
+            fi
           done
