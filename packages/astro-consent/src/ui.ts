@@ -25,6 +25,7 @@ const BUILT_IN_DEFAULTS: ResolvedConsentText = {
   savePreferences: 'Save preferences',
   essentialLabel: 'Essential',
   essentialDescription: 'Required for the website to function. Cannot be disabled.',
+  essentialBadge: 'Required',
   categories: {},
 };
 
@@ -50,6 +51,7 @@ function mergeText(base: ResolvedConsentText, layer: ConsentText | undefined): R
   if (layer.essentialDescription !== undefined) {
     next.essentialDescription = layer.essentialDescription;
   }
+  if (layer.essentialBadge !== undefined) next.essentialBadge = layer.essentialBadge;
 
   if (layer.categories) {
     for (const [key, override] of Object.entries(layer.categories)) {
@@ -195,16 +197,20 @@ function createCategoryToggle(
   description: string,
   isEssential: boolean,
   defaultValue: boolean,
+  badge?: string,
 ): string {
   const checked = isEssential || defaultValue ? 'checked' : '';
   const disabled = isEssential ? 'disabled' : '';
   const id = `cc-toggle-${escapeHtml(key)}`;
   const descId = `${id}-desc`;
+  const badgeHtml = badge ? `<span class="cc-badge">${escapeHtml(badge)}</span>` : '';
 
   return `
     <div class="cc-category">
       <div class="cc-category-header">
-        <label class="cc-category-label" for="${id}">${escapeHtml(label)}</label>
+        <div class="cc-category-label-group">
+          <label class="cc-category-label" for="${id}">${escapeHtml(label)}</label>${badgeHtml}
+        </div>
         <label class="cc-toggle">
           <input type="checkbox" id="${id}" data-cc-category="${escapeHtml(key)}" aria-describedby="${descId}" ${checked} ${disabled} />
           <span class="cc-toggle-slider" aria-hidden="true"></span>
@@ -221,6 +227,7 @@ function createModalHTML(config: SerializableConsentConfig, text: ResolvedConsen
     text.essentialDescription,
     true,
     true,
+    text.essentialBadge,
   );
 
   const categoryToggles = Object.entries(config.categories)
@@ -251,12 +258,14 @@ function createModalHTML(config: SerializableConsentConfig, text: ResolvedConsen
         <div class="cc-modal-body">
           ${essentialToggle}
           ${categoryToggles}
-          ${policyLink}
         </div>
         <div class="cc-modal-footer">
           <button type="button" class="cc-btn cc-btn-primary" data-cc="modal-accept-all">${escapeHtml(text.acceptAll)}</button>
           <button type="button" class="cc-btn cc-btn-secondary" data-cc="modal-reject-all">${escapeHtml(text.rejectAll)}</button>
           <button type="button" class="cc-btn cc-btn-primary" data-cc="save-preferences">${escapeHtml(text.savePreferences)}</button>
+        </div>
+        <div class="cc-modal-policy-bar">
+          ${policyLink}
         </div>
       </div>
     </div>`;
