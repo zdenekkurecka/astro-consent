@@ -105,6 +105,10 @@ jobs:
           PUBLISHED_PACKAGES: ${{ steps.changesets.outputs.publishedPackages }}
         run: |
           set -euo pipefail
+          # changesets-action pushed the default `@scope/name@version` tags
+          # to origin, but they may not be present in this checkout's local
+          # refs. Fetch them so `git tag <new> <old>` can resolve <old>.
+          git fetch --tags origin
           echo "$PUBLISHED_PACKAGES" | jq -c '.[]' | while read -r pkg; do
             name=$(echo "$pkg" | jq -r '.name')
             version=$(echo "$pkg" | jq -r '.version')

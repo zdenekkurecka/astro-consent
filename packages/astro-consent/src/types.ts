@@ -55,6 +55,7 @@ export interface ConsentText {
   // Essential category
   essentialLabel?: string;
   essentialDescription?: string;
+  essentialBadge?: string;
 
   /** Per-category label/description overrides, keyed by category key. */
   categories?: Record<string, ConsentCategoryText>;
