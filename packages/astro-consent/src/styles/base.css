@@ -358,17 +358,6 @@
   background-color: var(--cc-border);
 }
 
-.cc-btn-link {
-  background: none;
-  color: var(--cc-text-muted);
-  padding: 0.5rem 0.75rem;
-  border: none;
-}
-
-.cc-btn-link:hover {
-  color: var(--cc-text);
-}
-
 /* ── Policy link ────────────────────────────────────────── */
 
 .cc-policy-link {
