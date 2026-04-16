@@ -11,7 +11,7 @@
   --cc-text-muted: #64748b;
   --cc-border: #e2e8f0;
   --cc-radius: 1rem;
-  --cc-radius-btn: 9999px;
+  --cc-radius-pill: 9999px;
   --cc-font-family: inherit;
 }
 
@@ -166,7 +166,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1.5rem 2.5rem 1rem;
+  padding: 1.5rem 1.5rem 1rem 2.5rem;
 }
 
 .cc-modal-title {
@@ -179,16 +179,15 @@
 .cc-modal-close {
   background: none;
   border: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 9999px;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   color: var(--cc-text-muted);
   padding: 0;
-  margin-right: -10px;
   transition: background-color 0.15s ease;
 }
 
@@ -251,7 +250,7 @@
   font-weight: 500;
   color: var(--cc-text-muted);
   border: 1px solid var(--cc-border);
-  border-radius: 9999px;
+  border-radius: var(--cc-radius-pill);
   padding: 0.125rem 0.5rem;
   line-height: 1.5;
 }
@@ -284,7 +283,7 @@
   position: absolute;
   inset: 0;
   background-color: var(--cc-border);
-  border-radius: 9999px;
+  border-radius: var(--cc-radius-pill);
   cursor: pointer;
   transition: background-color 0.2s ease;
 }
@@ -297,7 +296,7 @@
   left: 0.1875rem;
   bottom: 0.1875rem;
   background-color: white;
-  border-radius: 9999px;
+  border-radius: 50%;
   transition: transform 0.2s ease;
   box-sizing: border-box;
 }
@@ -326,7 +325,7 @@
   font-weight: 500;
   font-family: var(--cc-font-family);
   line-height: 1.5;
-  border-radius: var(--cc-radius-btn);
+  border-radius: var(--cc-radius-pill);
   border: 1px solid transparent;
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
@@ -381,7 +380,7 @@
 }
 
 .cc-modal-policy-bar {
-  background-color: var(--cc-border);
+  background-color: var(--cc-surface);
   display: flex;
   align-items: center;
   justify-content: center;

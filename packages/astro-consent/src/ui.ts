@@ -51,7 +51,9 @@ function mergeText(base: ResolvedConsentText, layer: ConsentText | undefined): R
   if (layer.essentialDescription !== undefined) {
     next.essentialDescription = layer.essentialDescription;
   }
-  if (layer.essentialBadge !== undefined) next.essentialBadge = layer.essentialBadge;
+  if (layer.essentialBadge !== undefined) {
+    next.essentialBadge = layer.essentialBadge;
+  }
 
   if (layer.categories) {
     for (const [key, override] of Object.entries(layer.categories)) {
@@ -264,9 +266,7 @@ function createModalHTML(config: SerializableConsentConfig, text: ResolvedConsen
           <button type="button" class="cc-btn cc-btn-secondary" data-cc="modal-reject-all">${escapeHtml(text.rejectAll)}</button>
           <button type="button" class="cc-btn cc-btn-primary" data-cc="save-preferences">${escapeHtml(text.savePreferences)}</button>
         </div>
-        <div class="cc-modal-policy-bar">
-          ${policyLink}
-        </div>
+        ${policyLink ? `<div class="cc-modal-policy-bar">${policyLink}</div>` : ''}
       </div>
     </div>`;
 }
