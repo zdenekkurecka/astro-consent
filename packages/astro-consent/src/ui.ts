@@ -186,8 +186,8 @@ function createBannerHTML(config: SerializableConsentConfig, text: ResolvedConse
         </p>
         <div class="cc-banner-actions">
           <button type="button" class="cc-btn cc-btn-primary" data-cc="accept-all">${escapeHtml(text.acceptAll)}</button>
-          <button type="button" class="cc-btn cc-btn-secondary" data-cc="reject-all">${escapeHtml(text.rejectAll)}</button>
-          <button type="button" class="cc-btn cc-btn-link" data-cc="manage">${escapeHtml(text.manage)}</button>
+          <button type="button" class="cc-btn cc-btn-primary" data-cc="reject-all">${escapeHtml(text.rejectAll)}</button>
+          <button type="button" class="cc-btn cc-btn-secondary" data-cc="manage">${escapeHtml(text.manage)}</button>
         </div>
       </div>
     </div>`;
@@ -263,8 +263,8 @@ function createModalHTML(config: SerializableConsentConfig, text: ResolvedConsen
         </div>
         <div class="cc-modal-footer">
           <button type="button" class="cc-btn cc-btn-primary" data-cc="modal-accept-all">${escapeHtml(text.acceptAll)}</button>
-          <button type="button" class="cc-btn cc-btn-secondary" data-cc="modal-reject-all">${escapeHtml(text.rejectAll)}</button>
-          <button type="button" class="cc-btn cc-btn-primary" data-cc="save-preferences">${escapeHtml(text.savePreferences)}</button>
+          <button type="button" class="cc-btn cc-btn-primary" data-cc="modal-reject-all">${escapeHtml(text.rejectAll)}</button>
+          <button type="button" class="cc-btn cc-btn-secondary" data-cc="save-preferences">${escapeHtml(text.savePreferences)}</button>
         </div>
         ${policyLink ? `<div class="cc-modal-policy-bar">${policyLink}</div>` : ''}
       </div>
