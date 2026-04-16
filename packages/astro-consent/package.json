@@ -54,7 +54,8 @@
   "scripts": {
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "build": "pnpm run clean && tsc -p tsconfig.build.json && node scripts/copy-assets.mjs",
-    "dev": "tsc -p tsconfig.build.json --watch",
+    "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+    "dev:css": "node --watch-path=src/styles scripts/copy-assets.mjs",
     "prepublishOnly": "pnpm run build"
   },
   "peerDependencies": {
