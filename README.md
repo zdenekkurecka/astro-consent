@@ -394,6 +394,29 @@ Use `is:inline` so Astro leaves the placeholder markup untouched — otherwise
 the compiler may bundle or rewrite the tag and break the `type="text/plain"`
 convention.
 
+**`<ConsentScript>` component.** A thin Astro component is exported from
+`@zdenekkurecka/astro-consent/components` for the common case — it emits the
+same placeholder markup as above (including `is:inline`) with a named-prop
+API and forwards any other `<script>` attributes through:
+
+```astro
+---
+import { ConsentScript } from '@zdenekkurecka/astro-consent/components';
+---
+<ConsentScript
+  category="analytics"
+  src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXX"
+  async
+/>
+
+<ConsentScript category="analytics">
+  {`window.dataLayer = window.dataLayer || [];
+  function gtag(){ dataLayer.push(arguments); }
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXX');`}
+</ConsentScript>
+```
+
 How it works:
 
 - On `astro-consent:consent` / `astro-consent:change`, the integration scans

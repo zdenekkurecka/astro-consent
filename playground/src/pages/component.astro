@@ -1,0 +1,33 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { ConsentScript } from '@zdenekkurecka/astro-consent/components';
+---
+
+<Layout title="ConsentScript component">
+  <h1>ConsentScript component</h1>
+  <p>
+    Same gating as <code>/scripts</code>, but authored via the Astro component
+    instead of raw <code>type="text/plain"</code> markup.
+  </p>
+
+  <h2>Markers</h2>
+  <ul>
+    <li>Inline analytics: <span id="c-inline-marker" data-loaded="false">not loaded</span></li>
+    <li>External analytics: <span id="c-ext-marker" data-loaded="false">not loaded</span></li>
+    <li>Marketing inline (async attr): <span id="c-marketing-marker" data-loaded="false">not loaded</span></li>
+  </ul>
+
+  <ConsentScript category="analytics">
+    {`window.__ccComponentInlineLoaded = true;
+    var el = document.getElementById('c-inline-marker');
+    if (el) { el.setAttribute('data-loaded', 'true'); el.textContent = 'loaded'; }`}
+  </ConsentScript>
+
+  <ConsentScript category="analytics" src="/tracker-component.js" />
+
+  <ConsentScript category="marketing" async>
+    {`window.__ccComponentMarketingLoaded = true;
+    var el = document.getElementById('c-marketing-marker');
+    if (el) { el.setAttribute('data-loaded', 'true'); el.textContent = 'loaded'; }`}
+  </ConsentScript>
+</Layout>
