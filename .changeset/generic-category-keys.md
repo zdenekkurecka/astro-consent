@@ -24,5 +24,5 @@ const config = {
 
 The generic defaults to `string`, so existing code keeps compiling unchanged.
 End-to-end typing of the `astro-consent:consent` / `:change` event payload
-still requires a user-land `declare module` augmentation (the Vite virtual
-module boundary erases the generic); that is tracked as a follow-up.
+and `window.astroConsent` is available via the `ConsentKeys` augmentation
+pattern — see the Events / "Typed category keys" section in the README.

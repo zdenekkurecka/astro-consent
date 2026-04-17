@@ -261,9 +261,9 @@ export interface ConsentDebugSnapshot {
   needsConsent: boolean;
 }
 
-export interface ConsentAPI {
+export interface ConsentAPI<K extends string = string> {
   /** Returns the currently stored consent state, or `null` if none. */
-  get(): ConsentState | null;
+  get(): ConsentState<K> | null;
   /**
    * Merge a partial category map into the current state and persist it.
    *
@@ -273,7 +273,7 @@ export interface ConsentAPI {
    * state and dispatch `astro-consent:change` instead. The `essential`
    * category is always forced to `true`.
    */
-  set(categories: Partial<Record<string, boolean>>): void;
+  set(categories: Partial<Record<K, boolean>>): void;
   /** Clear the stored consent and re-show the banner. */
   reset(): void;
   /** Show the consent banner. */
@@ -317,15 +317,50 @@ export const CHANGE_EVENT = 'astro-consent:change';
 
 export type ConsentEvent<K extends string = string> = CustomEvent<ConsentState<K>>;
 
+/**
+ * Marker interface for consumers to opt into typed category keys across
+ * `window.astroConsent` and the `astro-consent:consent` / `astro-consent:change`
+ * event listeners.
+ *
+ * Augment it in a project-level `.d.ts` file with the category keys you
+ * declared in `cookieConsent({ categories: … })`:
+ *
+ * ```ts
+ * // src/astro-consent.d.ts
+ * declare module '@zdenekkurecka/astro-consent' {
+ *   interface ConsentKeys {
+ *     analytics: true;
+ *     marketing: true;
+ *   }
+ * }
+ * export {};
+ * ```
+ *
+ * With the augmentation in place, `e.detail.categories.*` and
+ * `window.astroConsent?.get()?.categories.*` narrow to the declared keys and
+ * typos error at compile time. Without it, both fall back to
+ * `Record<string, boolean>` — same as before.
+ */
+export interface ConsentKeys {}
+
+/**
+ * Resolves to the consumer-declared key union when `ConsentKeys` has been
+ * augmented, otherwise falls back to `string` so the default behaviour is
+ * non-breaking.
+ */
+export type ResolvedConsentKeys = [keyof ConsentKeys] extends [never]
+  ? string
+  : Extract<keyof ConsentKeys, string>;
+
 declare global {
   interface DocumentEventMap {
-    'astro-consent:consent': ConsentEvent;
-    'astro-consent:change': ConsentEvent;
+    'astro-consent:consent': ConsentEvent<ResolvedConsentKeys>;
+    'astro-consent:change': ConsentEvent<ResolvedConsentKeys>;
   }
 
   interface Window {
-    astroConsent?: ConsentAPI;
+    astroConsent?: ConsentAPI<ResolvedConsentKeys>;
     /** @deprecated Use `astroConsent` instead. */
-    zdenekkureckaConsent?: ConsentAPI;
+    zdenekkureckaConsent?: ConsentAPI<ResolvedConsentKeys>;
   }
 }

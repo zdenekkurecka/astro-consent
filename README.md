@@ -808,6 +808,43 @@ window.astroConsent?.reset();
 Both are typed `CustomEvent`s on `document`, so in TypeScript you get full
 autocompletion on `e.detail.categories`.
 
+### Typed category keys
+
+By default `e.detail.categories` is typed as `Record<string, boolean>` — usable,
+but no autocomplete and typos don't error. To get the category keys you
+declared in `cookieConsent({ categories: … })` to narrow across every listener
+*and* `window.astroConsent`, drop a project-level `.d.ts` that augments the
+`ConsentKeys` marker interface:
+
+```ts
+// src/astro-consent.d.ts
+declare module '@zdenekkurecka/astro-consent' {
+  interface ConsentKeys {
+    analytics: true;
+    marketing: true;
+  }
+}
+
+export {};
+```
+
+After this, both event listeners and the runtime API narrow:
+
+```ts
+document.addEventListener('astro-consent:consent', (e) => {
+  e.detail.categories.analytics; // boolean
+  e.detail.categories.analyitcs; // ❌ TS error — unknown key
+});
+
+window.astroConsent?.get()?.categories.marketing; // boolean
+window.astroConsent?.set({ analytics: true });    // ✓
+window.astroConsent?.set({ analyitcs: true });    // ❌ TS error
+```
+
+This is an opt-in pattern (same shape as Vue Router's `RouteMap` or Pinia's
+store augmentation): the library ships with a wide default so nothing breaks
+if you don't declare it, and the narrow type kicks in the moment you do.
+
 ## Accessibility
 
 - Modal has `role="dialog"` with `aria-modal="true"` and `aria-labelledby`
