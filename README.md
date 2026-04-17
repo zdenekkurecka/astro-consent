@@ -97,10 +97,12 @@ npx astro add @zdenekkurecka/astro-consent
 yarn astro add @zdenekkurecka/astro-consent
 ```
 
-> **Heads up:** `cookieConsent()` requires at least `version` and `categories`.
-> `astro add` inserts a bare `cookieConsent()` call — open `astro.config.*`
-> after it runs and pass the required options shown in [Quick start](#quick-start).
-> You'll get a clear error at build time if you forget.
+> **Heads up:** the integration requires at least `version` and `categories`.
+> `astro add` inserts a bare integration call with an auto-derived import name
+> (`zdenekkureckaconsent()`) — open `astro.config.*` after it runs and pass the
+> required options shown in [Quick start](#quick-start). Feel free to rename
+> the import to `cookieConsent` to match the examples below. You'll get a
+> clear error at build time if you forget to fill in the config.
 
 Or install manually:
 
@@ -863,7 +865,7 @@ if you don't declare it, and the narrow type kicks in the moment you do.
 
 This repository is a pnpm workspace:
 
-```
+```text
 .
 ├── packages/
 │   └── astro-consent/        # the published npm package
