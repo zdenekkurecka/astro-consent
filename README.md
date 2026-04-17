@@ -24,6 +24,8 @@
   - [Trigger the UI from your own buttons](#trigger-the-ui-from-your-own-buttons)
   - [Open the preferences modal from a footer link](#open-the-preferences-modal-from-a-footer-link)
   - [Gate third-party scripts (GA, Meta Pixel, …)](#gate-third-party-scripts-ga-meta-pixel-)
+  - [Enable Google Consent Mode v2](#enable-google-consent-mode-v2)
+  - [Recipes (GA4, GTM, Meta Pixel)](#recipes-ga4-gtm-meta-pixel)
   - [Re-prompt users after changing categories](#re-prompt-users-after-changing-categories)
   - [Customise banner & modal text (and localize it)](#customise-banner--modal-text-and-localize-it)
   - [Theme the UI](#theme-the-ui)
@@ -71,6 +73,11 @@ they force you to serialize your tracker callbacks into a JSON config.
   translated or customised
 - **Accessible modal**: `role="dialog"` / `aria-modal`, focus trap, focus
   restoration, `Escape` to close, click-outside to dismiss
+- **Declarative script blocking** via `type="text/plain"` +
+  `data-cc-category` — gate trackers and embeds without writing glue code
+- **Google Consent Mode v2** out of the box: opt-in config that maps your
+  categories to GCM signals, injects the default-denied snippet, and wires
+  `gtag('consent', 'update', …)` into the consent events
 - **Strict-CSP safe**: no inline `<script>`, no inline `<style>`
 - **View Transitions ready**: initializes on `DOMContentLoaded` *and*
   `astro:page-load`, idempotently
@@ -90,10 +97,12 @@ npx astro add @zdenekkurecka/astro-consent
 yarn astro add @zdenekkurecka/astro-consent
 ```
 
-> **Heads up:** `cookieConsent()` requires at least `version` and `categories`.
-> `astro add` inserts a bare `cookieConsent()` call — open `astro.config.*`
-> after it runs and pass the required options shown in [Quick start](#quick-start).
-> You'll get a clear error at build time if you forget.
+> **Heads up:** the integration requires at least `version` and `categories`.
+> `astro add` inserts a bare integration call with an auto-derived import name
+> (`zdenekkureckaconsent()`) — open `astro.config.*` after it runs and pass the
+> required options shown in [Quick start](#quick-start). Feel free to rename
+> the import to `cookieConsent` to match the examples below. You'll get a
+> clear error at build time if you forget to fill in the config.
 
 Or install manually:
 
@@ -218,6 +227,16 @@ interface ConsentConfig {
    * built-in defaults.
    */
   localeText?: Record<string, ConsentText>;
+
+  /**
+   * Google Consent Mode v2 integration. When set, the integration injects an
+   * inline snippet at the top of `<head>` to pre-declare denied defaults, and
+   * auto-dispatches `gtag('consent', 'update', …)` on every consent event.
+   *
+   * Opt-in. Requires `'unsafe-inline'` (or a matching hash) under strict CSP —
+   * see [Enable Google Consent Mode v2](#enable-google-consent-mode-v2).
+   */
+  googleConsentMode?: GoogleConsentModeConfig;
 }
 
 interface ConsentText {
@@ -338,9 +357,92 @@ window.astroConsent?.showPreferences();
 
 ### Gate third-party scripts (GA, Meta Pixel, …)
 
-The pattern is always the same: listen for `astro-consent:consent`, and only
-load the tracker if the relevant category is enabled. Then listen for
-`astro-consent:change` to react when the user later updates their choices.
+There are two ways to gate a tracker: a declarative markup pattern (good for
+90% of cases), and the event-based hook (for anything that needs custom
+logic). They compose — use whichever fits each tracker.
+
+#### Declarative blocking (recommended)
+
+Mark a `<script>` with `type="text/plain"` and a `data-cc-category`. The
+browser treats `text/plain` scripts as inert data, so the tracker stays
+dormant until the integration unblocks it once the category is granted.
+Use `data-cc-src` for external scripts and a plain body for inline ones.
+
+```astro
+<!-- External — recommended, CSP-safe -->
+<script
+  is:inline
+  type="text/plain"
+  data-cc-category="analytics"
+  data-cc-src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXX"
+  async
+></script>
+
+<!-- Inline — requires `'unsafe-inline'` (or a nonce) under strict CSP -->
+<script is:inline type="text/plain" data-cc-category="analytics">
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){ dataLayer.push(arguments); }
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXX');
+</script>
+
+<!-- iframe embeds work the same way -->
+<iframe
+  data-cc-category="marketing"
+  data-cc-src="https://www.youtube.com/embed/…"
+></iframe>
+```
+
+Use `is:inline` so Astro leaves the placeholder markup untouched — otherwise
+the compiler may bundle or rewrite the tag and break the `type="text/plain"`
+convention.
+
+**`<ConsentScript>` component.** A thin Astro component is exported from
+`@zdenekkurecka/astro-consent/components` for the common case — it emits the
+same placeholder markup as above (including `is:inline`) with a named-prop
+API and forwards any other `<script>` attributes through:
+
+```astro
+---
+import { ConsentScript } from '@zdenekkurecka/astro-consent/components';
+---
+<ConsentScript
+  category="analytics"
+  src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXX"
+  async
+/>
+
+<ConsentScript category="analytics">
+  {`window.dataLayer = window.dataLayer || [];
+  function gtag(){ dataLayer.push(arguments); }
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXX');`}
+</ConsentScript>
+```
+
+How it works:
+
+- On `astro-consent:consent` / `astro-consent:change`, the integration scans
+  for blocked elements whose category is now granted and activates them in
+  place.
+- A `MutationObserver` catches blocked elements inserted after the initial
+  scan (e.g. via client-side routing or framework islands).
+- All other attributes on the placeholder (`async`, `defer`, `nonce`,
+  `integrity`, `crossorigin`, …) are preserved on the activated script.
+- Activated elements are marked with `data-cc-activated="true"` so repeated
+  scans are a no-op.
+
+**Revocation caveat.** Once a tracker has executed, the integration cannot
+unload it — most trackers aren't teardown-safe. If a user later revokes a
+category, the next full page load will keep those scripts blocked, but the
+current session will still have them running. Design accordingly, or drive
+teardown yourself from `astro-consent:change`.
+
+#### Event-based hook (advanced / full control)
+
+For trackers that need custom bootstrap logic — dynamic config, manual
+teardown, integration with `window.dataLayer` before the script tag lands —
+listen to the consent events directly:
 
 ```astro
 <script>
@@ -366,6 +468,108 @@ load the tracker if the relevant category is enabled. Then listen for
   });
 </script>
 ```
+
+### Enable Google Consent Mode v2
+
+GA4, Google Ads, and every other Google tag need
+[Consent Mode v2](https://developers.google.com/tag-platform/security/concepts/consent-mode)
+to run legally in the EU. The integration ships first-class support: map your
+categories to GCM signals and the rest is handled for you.
+
+```ts
+cookieConsent({
+  version: 1,
+  categories: {
+    analytics: { label: 'Analytics', description: '…', default: false },
+    marketing: { label: 'Marketing', description: '…', default: false },
+  },
+  googleConsentMode: {
+    enabled: true,
+    mapping: {
+      analytics: ['analytics_storage'],
+      marketing: ['ad_storage', 'ad_user_data', 'ad_personalization'],
+    },
+    // Hint to GTM on how long to delay firing tags. Default 500ms.
+    waitForUpdate: 500,
+    // Optional: regional default overrides. Accepts either a single value
+    // (applied to every mapped signal) or a per-signal object.
+    regions: {
+      US: 'granted',
+      BR: { ad_storage: 'denied' },
+    },
+    // Optional Google flags, forwarded via gtag('set', …).
+    adsDataRedaction: true,
+    urlPassthrough: false,
+  },
+});
+```
+
+What the integration does for you:
+
+1. Injects an inline snippet at the top of `<head>` that bootstraps
+   `window.dataLayer` + `gtag` and calls `gtag('consent', 'default', { …,
+   wait_for_update: 500 })` with every mapped signal set to `"denied"` (unless
+   overridden via `defaults` / `regions`).
+2. On every `astro-consent:consent` or `astro-consent:change` event,
+   dispatches `gtag('consent', 'update', …)` with each signal set to
+   `"granted"` only when **every** category that maps to it is granted.
+3. Forwards `adsDataRedaction` / `urlPassthrough` as `gtag('set', …)` calls in
+   the default snippet.
+
+Drop your GA4 / Google Ads tag anywhere in your layout (or gate it via
+`data-cc-category` — the two compose) and it will pick up the consent state
+automatically:
+
+```astro
+<script
+  is:inline
+  async
+  src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXX"
+></script>
+<script is:inline>
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXX');
+</script>
+```
+
+**CSP caveat.** The default snippet is inline, so enabling
+`googleConsentMode` requires `script-src` to include `'unsafe-inline'` or a
+matching hash/nonce. If you don't configure `googleConsentMode`, the
+integration stays strict-CSP-safe.
+
+```ts
+interface GoogleConsentModeConfig {
+  enabled?: boolean;                                          // default: true
+  mapping: Partial<Record<string, GoogleConsentSignal[]>>;
+  waitForUpdate?: number;                                     // default: 500
+  defaults?: Partial<Record<GoogleConsentSignal, 'granted' | 'denied'>>;
+  regions?: Record<string,
+    | 'granted' | 'denied'
+    | Partial<Record<GoogleConsentSignal, 'granted' | 'denied'>>
+  >;
+  adsDataRedaction?: boolean;
+  urlPassthrough?: boolean;
+}
+
+type GoogleConsentSignal =
+  | 'ad_storage'
+  | 'ad_user_data'
+  | 'ad_personalization'
+  | 'analytics_storage'
+  | 'functionality_storage'
+  | 'personalization_storage'
+  | 'security_storage';
+```
+
+### Recipes (GA4, GTM, Meta Pixel)
+
+Copy-paste wiring for the trackers people ask about most often, with
+category mappings, GCM configuration where relevant, and tracker-specific
+gotchas. These live under [`docs/recipes/`](https://github.com/zdenekkurecka/astro-consent/blob/main/docs/recipes/):
+
+- [Google Analytics 4 (gtag.js)](https://github.com/zdenekkurecka/astro-consent/blob/main/docs/recipes/ga4.md)
+- [Google Tag Manager](https://github.com/zdenekkurecka/astro-consent/blob/main/docs/recipes/gtm.md)
+- [Meta Pixel (Facebook)](https://github.com/zdenekkurecka/astro-consent/blob/main/docs/recipes/meta-pixel.md)
 
 ### Re-prompt users after changing categories
 
@@ -606,6 +810,43 @@ window.astroConsent?.reset();
 Both are typed `CustomEvent`s on `document`, so in TypeScript you get full
 autocompletion on `e.detail.categories`.
 
+### Typed category keys
+
+By default `e.detail.categories` is typed as `Record<string, boolean>` — usable,
+but no autocomplete and typos don't error. To get the category keys you
+declared in `cookieConsent({ categories: … })` to narrow across every listener
+*and* `window.astroConsent`, drop a project-level `.d.ts` that augments the
+`ConsentKeys` marker interface:
+
+```ts
+// src/astro-consent.d.ts
+declare module '@zdenekkurecka/astro-consent' {
+  interface ConsentKeys {
+    analytics: true;
+    marketing: true;
+  }
+}
+
+export {};
+```
+
+After this, both event listeners and the runtime API narrow:
+
+```ts
+document.addEventListener('astro-consent:consent', (e) => {
+  e.detail.categories.analytics; // boolean
+  e.detail.categories.analyitcs; // ❌ TS error — unknown key
+});
+
+window.astroConsent?.get()?.categories.marketing; // boolean
+window.astroConsent?.set({ analytics: true });    // ✓
+window.astroConsent?.set({ analyitcs: true });    // ❌ TS error
+```
+
+This is an opt-in pattern (same shape as Vue Router's `RouteMap` or Pinia's
+store augmentation): the library ships with a wide default so nothing breaks
+if you don't declare it, and the narrow type kicks in the moment you do.
+
 ## Accessibility
 
 - Modal has `role="dialog"` with `aria-modal="true"` and `aria-labelledby`
@@ -624,7 +865,7 @@ autocompletion on `e.detail.categories`.
 
 This repository is a pnpm workspace:
 
-```
+```text
 .
 ├── packages/
 │   └── astro-consent/        # the published npm package

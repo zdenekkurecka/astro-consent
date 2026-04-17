@@ -24,6 +24,19 @@ export default defineConfig({
           default: false,
         },
       },
+      googleConsentMode: {
+        enabled: true,
+        mapping: {
+          analytics: ['analytics_storage'],
+          marketing: ['ad_storage', 'ad_user_data', 'ad_personalization'],
+        },
+        waitForUpdate: 500,
+        regions: {
+          US: 'granted',
+        },
+        adsDataRedaction: true,
+        urlPassthrough: false,
+      },
     }),
   ],
 });

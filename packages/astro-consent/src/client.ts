@@ -30,6 +30,8 @@ import {
   updateModalToggles,
   handleModalTabTrap,
 } from './ui.js';
+import { activateBlockedResources, initScriptBlocker } from './scripts.js';
+import { buildGcmUpdatePayload } from './gcm.js';
 
 const LOG_PREFIX = '[astro-consent]';
 
@@ -43,6 +45,8 @@ function log(...args: unknown[]): void {
 }
 
 let listenerAttached = false;
+let scriptBlockerAttached = false;
+let gcmListenerAttached = false;
 let consentFiredThisSession = false;
 
 /**
@@ -71,6 +75,46 @@ export function initConsentManager(config: SerializableConsentConfig): void {
   // Apply the configured localStorage key before any read/write so multiple
   // Astro apps on the same origin don't clobber each other's consent state.
   setStorageKey(config.storageKey);
+
+  // Declarative script blocking. Attach listeners + start the MutationObserver
+  // once per page lifecycle, BEFORE the initial CONSENT_EVENT emit below —
+  // otherwise pages with pre-existing consent would miss the first activation.
+  if (!scriptBlockerAttached) {
+    scriptBlockerAttached = true;
+    initScriptBlocker();
+    const onConsent = (e: CustomEvent<ConsentState>): void => {
+      activateBlockedResources(e.detail.categories);
+    };
+    document.addEventListener(CONSENT_EVENT, onConsent);
+    document.addEventListener(CHANGE_EVENT, onConsent);
+  }
+
+  // Google Consent Mode v2: translate every consent event into
+  // `gtag('consent', 'update', …)`. Must be attached before the initial
+  // emit below so pages with pre-existing consent fire an update on load.
+  const gcmConfig = config.googleConsentMode;
+  if (gcmConfig && gcmConfig.enabled !== false && !gcmListenerAttached) {
+    gcmListenerAttached = true;
+    const onGcm = (e: CustomEvent<ConsentState>): void => {
+      const payload = buildGcmUpdatePayload(gcmConfig, e.detail.categories);
+      const gtag = (window as unknown as { gtag?: (...args: unknown[]) => void }).gtag;
+      if (typeof gtag === 'function') {
+        gtag('consent', 'update', payload);
+        log('gcm update', payload);
+      } else {
+        // The head-inline snippet installs `gtag` globally. If it's missing,
+        // the snippet was stripped (CSP? custom head template?) — fall back to
+        // a raw dataLayer push so the update still lands once GTM loads.
+        const dl = (window as unknown as { dataLayer?: unknown[] }).dataLayer;
+        if (Array.isArray(dl)) {
+          dl.push(['consent', 'update', payload]);
+          log('gcm update (dataLayer fallback)', payload);
+        }
+      }
+    };
+    document.addEventListener(CONSENT_EVENT, onGcm);
+    document.addEventListener(CHANGE_EVENT, onGcm);
+  }
 
   // Resolve UI text once per init: reads <html lang>, merges built-in
   // defaults → config.text → localeText[lang]. Passed to every injectUI call
@@ -113,24 +157,26 @@ export function initConsentManager(config: SerializableConsentConfig): void {
         case 'accept-all':
         case 'modal-accept-all': {
           log(`${action} →`, 'all categories: true');
+          const isUpdate = !needsConsent(config.version, config.maxAgeDays);
           const state = acceptAll(config);
           persist(state);
           hideBanner();
           hideModal();
           consentFiredThisSession = true;
-          emit(CONSENT_EVENT, state);
+          emit(isUpdate ? CHANGE_EVENT : CONSENT_EVENT, state);
           break;
         }
 
         case 'reject-all':
         case 'modal-reject-all': {
           log(`${action} →`, 'non-essential categories: false');
+          const isUpdate = !needsConsent(config.version, config.maxAgeDays);
           const state = rejectAll(config);
           persist(state);
           hideBanner();
           hideModal();
           consentFiredThisSession = true;
-          emit(CONSENT_EVENT, state);
+          emit(isUpdate ? CHANGE_EVENT : CONSENT_EVENT, state);
           break;
         }
 

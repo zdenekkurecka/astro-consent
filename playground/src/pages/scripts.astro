@@ -1,0 +1,73 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Declarative script blocking">
+  <h1>Declarative script blocking</h1>
+  <p>
+    Demonstrates <code>data-cc-category</code> gating. Scripts here are
+    declared with <code>type="text/plain"</code> so the browser treats them
+    as inert data islands until consent is granted.
+  </p>
+
+  <h2>Markers</h2>
+  <ul>
+    <li>Inline analytics: <span id="inline-marker" data-loaded="false">not loaded</span></li>
+    <li>External analytics: <span id="ext-marker" data-loaded="false">not loaded</span></li>
+    <li>Marketing inline: <span id="marketing-marker" data-loaded="false">not loaded</span></li>
+    <li>Dynamic analytics: <span id="dynamic-marker" data-loaded="false">not loaded</span></li>
+  </ul>
+
+  <iframe
+    id="blocked-iframe"
+    data-cc-category="marketing"
+    data-cc-src="/iframe-body.html"
+    width="320"
+    height="80"
+    title="Blocked marketing iframe"
+  ></iframe>
+
+  <button id="btn-insert" type="button">Insert blocked script dynamically</button>
+
+  <!--
+    is:inline keeps Astro from processing / bundling these tags — we need the
+    raw type="text/plain" placeholder markup to survive to the browser.
+  -->
+  <script is:inline type="text/plain" data-cc-category="analytics">
+    window.__ccInlineLoaded = true;
+    var el = document.getElementById('inline-marker');
+    if (el) { el.setAttribute('data-loaded', 'true'); el.textContent = 'loaded'; }
+  </script>
+
+  <script
+    is:inline
+    type="text/plain"
+    data-cc-category="analytics"
+    data-cc-src="/tracker.js"
+  ></script>
+
+  <script is:inline type="text/plain" data-cc-category="marketing">
+    window.__ccMarketingLoaded = true;
+    var el = document.getElementById('marketing-marker');
+    if (el) { el.setAttribute('data-loaded', 'true'); el.textContent = 'loaded'; }
+  </script>
+
+  <script>
+    document.addEventListener('astro:page-load', () => {
+      document.getElementById('btn-insert')?.addEventListener('click', () => {
+        // Build the placeholder in the same shape as the static ones above.
+        // The MutationObserver inside the integration should pick it up and
+        // unblock it if the `analytics` category is currently granted.
+        const s = document.createElement('script');
+        s.setAttribute('type', 'text/plain');
+        s.setAttribute('data-cc-category', 'analytics');
+        s.textContent = [
+          'window.__ccDynamicLoaded = true;',
+          "var el = document.getElementById('dynamic-marker');",
+          "if (el) { el.setAttribute('data-loaded', 'true'); el.textContent = 'loaded'; }",
+        ].join('\n');
+        document.body.appendChild(s);
+      });
+    });
+  </script>
+</Layout>

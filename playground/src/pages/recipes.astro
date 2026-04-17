@@ -1,0 +1,55 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { ConsentScript } from '@zdenekkurecka/astro-consent/components';
+---
+
+<Layout title="Recipes">
+  <h1>Recipes (GA4, GTM, Meta Pixel)</h1>
+  <p>
+    Verifies the wiring from <code>docs/recipes/</code> using stub scripts so
+    no real third-party network calls happen. Each recipe uses the same
+    <code>&lt;ConsentScript&gt;</code> component documented in the main README.
+  </p>
+
+  <h2>Markers</h2>
+  <ul>
+    <li>GA4 external: <span id="recipe-ga4-marker" data-loaded="false">not loaded</span></li>
+    <li>GA4 inline (<code>gtag('config', …)</code>): <span id="recipe-ga4-inline-marker" data-loaded="false">not loaded</span></li>
+    <li>GTM loader (inline IIFE → external stub): <span id="recipe-gtm-marker" data-loaded="false">not loaded</span></li>
+    <li>Meta Pixel external: <span id="recipe-metapixel-marker" data-loaded="false">not loaded</span></li>
+    <li>Meta Pixel inline (<code>fbq('init', …)</code>): <span id="recipe-metapixel-inline-marker" data-loaded="false">not loaded</span></li>
+  </ul>
+
+  <!-- GA4 recipe: analytics category. External loader + inline config. -->
+  <ConsentScript category="analytics" src="/recipes-ga4.js" async />
+  <ConsentScript category="analytics">
+    {`window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-RECIPE-STUB');
+    window.__ccRecipeGA4InlineLoaded = true;
+    var el = document.getElementById('recipe-ga4-inline-marker');
+    if (el) { el.setAttribute('data-loaded', 'true'); el.textContent = 'loaded'; }`}
+  </ConsentScript>
+
+  <!-- GTM recipe: analytics category (tags inside GTM would read GCM signals). -->
+  <ConsentScript category="analytics">
+    {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;
+    j.src='/recipes-gtm.js';
+    f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','GTM-RECIPE-STUB');`}
+  </ConsentScript>
+
+  <!-- Meta Pixel recipe: marketing category. External loader + inline init. -->
+  <ConsentScript category="marketing" src="/recipes-metapixel.js" />
+  <ConsentScript category="marketing">
+    {`window.fbq = window.fbq || function(){ (window.fbq.q = window.fbq.q || []).push(arguments); };
+    window.fbq('init', '000000000000000');
+    window.fbq('track', 'PageView');
+    window.__ccRecipeMetaPixelInlineLoaded = true;
+    var el = document.getElementById('recipe-metapixel-inline-marker');
+    if (el) { el.setAttribute('data-loaded', 'true'); el.textContent = 'loaded'; }`}
+  </ConsentScript>
+</Layout>

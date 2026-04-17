@@ -14,9 +14,14 @@ const repoRoot = resolve(pkgRoot, '..', '..');
 
 const assets = [
   // [absolute source, absolute destination]
-  [resolve(pkgRoot, 'src/styles/base.css'), resolve(pkgRoot, 'dist/styles/base.css')],
-  [resolve(repoRoot, 'README.md'),          resolve(pkgRoot, 'README.md')],
-  [resolve(repoRoot, 'LICENSE'),            resolve(pkgRoot, 'LICENSE')],
+  [resolve(pkgRoot, 'src/styles/base.css'),                       resolve(pkgRoot, 'dist/styles/base.css')],
+  // `.astro` files are passed through verbatim — `tsc` doesn't understand
+  // them, so the build emits `dist/components/index.js` with a relative
+  // import into `./ConsentScript.astro` which Astro/Vite resolves in the
+  // consumer's project.
+  [resolve(pkgRoot, 'src/components/ConsentScript.astro'),        resolve(pkgRoot, 'dist/components/ConsentScript.astro')],
+  [resolve(repoRoot, 'README.md'),                                resolve(pkgRoot, 'README.md')],
+  [resolve(repoRoot, 'LICENSE'),                                  resolve(pkgRoot, 'LICENSE')],
 ];
 
 for (const [src, dst] of assets) {

@@ -41,6 +41,10 @@
       "types": "./dist/client.d.ts",
       "default": "./dist/client.js"
     },
+    "./components": {
+      "types": "./dist/components/index.d.ts",
+      "default": "./dist/components/index.js"
+    },
     "./styles": "./dist/styles/base.css",
     "./styles/base.css": "./dist/styles/base.css",
     "./package.json": "./package.json"
@@ -55,7 +59,7 @@
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "build": "pnpm run clean && tsc -p tsconfig.build.json && node scripts/copy-assets.mjs",
     "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
-    "dev:css": "node --watch-path=src/styles scripts/copy-assets.mjs",
+    "dev:css": "node --watch-path=src/styles --watch-path=src/components scripts/copy-assets.mjs",
     "prepublishOnly": "pnpm run build"
   },
   "peerDependencies": {
