@@ -25,6 +25,7 @@
   - [Open the preferences modal from a footer link](#open-the-preferences-modal-from-a-footer-link)
   - [Gate third-party scripts (GA, Meta Pixel, …)](#gate-third-party-scripts-ga-meta-pixel-)
   - [Enable Google Consent Mode v2](#enable-google-consent-mode-v2)
+  - [Recipes (GA4, GTM, Meta Pixel)](#recipes-ga4-gtm-meta-pixel)
   - [Re-prompt users after changing categories](#re-prompt-users-after-changing-categories)
   - [Customise banner & modal text (and localize it)](#customise-banner--modal-text-and-localize-it)
   - [Theme the UI](#theme-the-ui)
@@ -557,6 +558,16 @@ type GoogleConsentSignal =
   | 'personalization_storage'
   | 'security_storage';
 ```
+
+### Recipes (GA4, GTM, Meta Pixel)
+
+Copy-paste wiring for the trackers people ask about most often, with
+category mappings, GCM configuration where relevant, and tracker-specific
+gotchas. These live under [`docs/recipes/`](https://github.com/zdenekkurecka/astro-consent/blob/main/docs/recipes/):
+
+- [Google Analytics 4 (gtag.js)](https://github.com/zdenekkurecka/astro-consent/blob/main/docs/recipes/ga4.md)
+- [Google Tag Manager](https://github.com/zdenekkurecka/astro-consent/blob/main/docs/recipes/gtm.md)
+- [Meta Pixel (Facebook)](https://github.com/zdenekkurecka/astro-consent/blob/main/docs/recipes/meta-pixel.md)
 
 ### Re-prompt users after changing categories
 
