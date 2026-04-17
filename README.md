@@ -71,6 +71,8 @@ they force you to serialize your tracker callbacks into a JSON config.
   translated or customised
 - **Accessible modal**: `role="dialog"` / `aria-modal`, focus trap, focus
   restoration, `Escape` to close, click-outside to dismiss
+- **Declarative script blocking** via `type="text/plain"` +
+  `data-cc-category` — gate trackers and embeds without writing glue code
 - **Strict-CSP safe**: no inline `<script>`, no inline `<style>`
 - **View Transitions ready**: initializes on `DOMContentLoaded` *and*
   `astro:page-load`, idempotently
@@ -338,9 +340,69 @@ window.astroConsent?.showPreferences();
 
 ### Gate third-party scripts (GA, Meta Pixel, …)
 
-The pattern is always the same: listen for `astro-consent:consent`, and only
-load the tracker if the relevant category is enabled. Then listen for
-`astro-consent:change` to react when the user later updates their choices.
+There are two ways to gate a tracker: a declarative markup pattern (good for
+90% of cases), and the event-based hook (for anything that needs custom
+logic). They compose — use whichever fits each tracker.
+
+#### Declarative blocking (recommended)
+
+Mark a `<script>` with `type="text/plain"` and a `data-cc-category`. The
+browser treats `text/plain` scripts as inert data, so the tracker stays
+dormant until the integration unblocks it once the category is granted.
+Use `data-cc-src` for external scripts and a plain body for inline ones.
+
+```astro
+<!-- External — recommended, CSP-safe -->
+<script
+  is:inline
+  type="text/plain"
+  data-cc-category="analytics"
+  data-cc-src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXX"
+  async
+></script>
+
+<!-- Inline — requires `'unsafe-inline'` (or a nonce) under strict CSP -->
+<script is:inline type="text/plain" data-cc-category="analytics">
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){ dataLayer.push(arguments); }
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXX');
+</script>
+
+<!-- iframe embeds work the same way -->
+<iframe
+  data-cc-category="marketing"
+  data-cc-src="https://www.youtube.com/embed/…"
+></iframe>
+```
+
+Use `is:inline` so Astro leaves the placeholder markup untouched — otherwise
+the compiler may bundle or rewrite the tag and break the `type="text/plain"`
+convention.
+
+How it works:
+
+- On `astro-consent:consent` / `astro-consent:change`, the integration scans
+  for blocked elements whose category is now granted and activates them in
+  place.
+- A `MutationObserver` catches blocked elements inserted after the initial
+  scan (e.g. via client-side routing or framework islands).
+- All other attributes on the placeholder (`async`, `defer`, `nonce`,
+  `integrity`, `crossorigin`, …) are preserved on the activated script.
+- Activated elements are marked with `data-cc-activated="true"` so repeated
+  scans are a no-op.
+
+**Revocation caveat.** Once a tracker has executed, the integration cannot
+unload it — most trackers aren't teardown-safe. If a user later revokes a
+category, the next full page load will keep those scripts blocked, but the
+current session will still have them running. Design accordingly, or drive
+teardown yourself from `astro-consent:change`.
+
+#### Event-based hook (advanced / full control)
+
+For trackers that need custom bootstrap logic — dynamic config, manual
+teardown, integration with `window.dataLayer` before the script tag lands —
+listen to the consent events directly:
 
 ```astro
 <script>

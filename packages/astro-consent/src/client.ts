@@ -30,6 +30,7 @@ import {
   updateModalToggles,
   handleModalTabTrap,
 } from './ui.js';
+import { activateBlockedResources, initScriptBlocker } from './scripts.js';
 
 const LOG_PREFIX = '[astro-consent]';
 
@@ -43,6 +44,7 @@ function log(...args: unknown[]): void {
 }
 
 let listenerAttached = false;
+let scriptBlockerAttached = false;
 let consentFiredThisSession = false;
 
 /**
@@ -71,6 +73,19 @@ export function initConsentManager(config: SerializableConsentConfig): void {
   // Apply the configured localStorage key before any read/write so multiple
   // Astro apps on the same origin don't clobber each other's consent state.
   setStorageKey(config.storageKey);
+
+  // Declarative script blocking. Attach listeners + start the MutationObserver
+  // once per page lifecycle, BEFORE the initial CONSENT_EVENT emit below —
+  // otherwise pages with pre-existing consent would miss the first activation.
+  if (!scriptBlockerAttached) {
+    scriptBlockerAttached = true;
+    initScriptBlocker();
+    const onConsent = (e: CustomEvent<ConsentState>): void => {
+      activateBlockedResources(e.detail.categories);
+    };
+    document.addEventListener(CONSENT_EVENT, onConsent);
+    document.addEventListener(CHANGE_EVENT, onConsent);
+  }
 
   // Resolve UI text once per init: reads <html lang>, merges built-in
   // defaults → config.text → localeText[lang]. Passed to every injectUI call
