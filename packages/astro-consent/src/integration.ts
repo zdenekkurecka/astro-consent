@@ -2,7 +2,9 @@ import type { AstroIntegration } from 'astro';
 import type { ConsentConfig, SerializableConsentConfig } from './types.js';
 import { vitePluginConsentConfig } from './virtual-config.js';
 
-export default function cookieConsent(userConfig?: ConsentConfig): AstroIntegration {
+export default function cookieConsent<K extends string = string>(
+  userConfig?: ConsentConfig<K>,
+): AstroIntegration {
   if (
     !userConfig ||
     typeof userConfig.version !== 'number' ||
@@ -19,7 +21,7 @@ export default function cookieConsent(userConfig?: ConsentConfig): AstroIntegrat
     );
   }
 
-  const serializableConfig: SerializableConsentConfig = {
+  const serializableConfig: SerializableConsentConfig<K> = {
     version: userConfig.version,
     categories: userConfig.categories,
     cookiePolicy: userConfig.cookiePolicy,

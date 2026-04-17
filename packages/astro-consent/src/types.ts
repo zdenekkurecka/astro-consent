@@ -39,8 +39,11 @@ export interface ConsentCategoryText {
  * All fields are optional. Unspecified fields fall back to the built-in
  * English defaults, so you only need to provide the strings you want to
  * change.
+ *
+ * When the parent `ConsentConfig` is given a literal category-key union,
+ * `categories` autocompletes and typo-checks against that union.
  */
-export interface ConsentText {
+export interface ConsentText<K extends string = string> {
   // Banner
   bannerText?: string;
   acceptAll?: string;
@@ -58,12 +61,12 @@ export interface ConsentText {
   essentialBadge?: string;
 
   /** Per-category label/description overrides, keyed by category key. */
-  categories?: Record<string, ConsentCategoryText>;
+  categories?: Partial<Record<K, ConsentCategoryText>>;
 }
 
-export interface ConsentConfig {
+export interface ConsentConfig<K extends string = string> {
   version: number;
-  categories: Record<string, ConsentCategory>;
+  categories: Record<K, ConsentCategory>;
   cookiePolicy?: CookiePolicyLink;
 
   /**
@@ -100,7 +103,7 @@ export interface ConsentConfig {
   ui?: ConsentUIConfig;
 
   /** Single-language text overrides, or shared fallback for `localeText`. */
-  text?: ConsentText;
+  text?: ConsentText<K>;
 
   /**
    * Per-locale text overrides. Keys are BCP 47 language tags that match the
@@ -109,25 +112,25 @@ export interface ConsentConfig {
    * Resolution order at runtime: exact match → primary subtag → `text` →
    * built-in defaults.
    */
-  localeText?: Record<string, ConsentText>;
+  localeText?: Record<string, ConsentText<K>>;
 }
 
-export interface ConsentState {
+export interface ConsentState<K extends string = string> {
   version: number;
   timestamp: number;
-  categories: Record<string, boolean>;
+  categories: Record<K, boolean>;
 }
 
-export interface SerializableConsentConfig {
+export interface SerializableConsentConfig<K extends string = string> {
   version: number;
-  categories: Record<string, ConsentCategory>;
+  categories: Record<K, ConsentCategory>;
   cookiePolicy?: CookiePolicyLink;
   storageKey?: string;
   maxAgeDays?: number;
   debug?: boolean;
   ui?: ConsentUIConfig;
-  text?: ConsentText;
-  localeText?: Record<string, ConsentText>;
+  text?: ConsentText<K>;
+  localeText?: Record<string, ConsentText<K>>;
 }
 
 /**
@@ -199,7 +202,7 @@ export const CONSENT_EVENT = 'astro-consent:consent';
  */
 export const CHANGE_EVENT = 'astro-consent:change';
 
-export type ConsentEvent = CustomEvent<ConsentState>;
+export type ConsentEvent<K extends string = string> = CustomEvent<ConsentState<K>>;
 
 declare global {
   interface DocumentEventMap {
