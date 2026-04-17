@@ -157,24 +157,26 @@ export function initConsentManager(config: SerializableConsentConfig): void {
         case 'accept-all':
         case 'modal-accept-all': {
           log(`${action} →`, 'all categories: true');
+          const isUpdate = !needsConsent(config.version, config.maxAgeDays);
           const state = acceptAll(config);
           persist(state);
           hideBanner();
           hideModal();
           consentFiredThisSession = true;
-          emit(CONSENT_EVENT, state);
+          emit(isUpdate ? CHANGE_EVENT : CONSENT_EVENT, state);
           break;
         }
 
         case 'reject-all':
         case 'modal-reject-all': {
           log(`${action} →`, 'non-essential categories: false');
+          const isUpdate = !needsConsent(config.version, config.maxAgeDays);
           const state = rejectAll(config);
           persist(state);
           hideBanner();
           hideModal();
           consentFiredThisSession = true;
-          emit(CONSENT_EVENT, state);
+          emit(isUpdate ? CHANGE_EVENT : CONSENT_EVENT, state);
           break;
         }
 

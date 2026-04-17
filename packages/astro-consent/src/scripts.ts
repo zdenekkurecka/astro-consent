@@ -28,9 +28,11 @@ const IFRAME_SELECTOR = 'iframe[data-cc-category][data-cc-src]:not([src])';
 /**
  * Attributes we deliberately drop when cloning a blocked script into a live
  * one. `type` would re-block it; `data-cc-src` is the source-of-truth we've
- * already copied into `src`.
+ * already copied into `src`. `nonce` is skipped here because the content
+ * attribute is hidden post-parse (CSP L3) — we copy it via the `.nonce`
+ * IDL property below instead.
  */
-const SCRIPT_SKIP_ATTRS = new Set(['type', 'data-cc-src']);
+const SCRIPT_SKIP_ATTRS = new Set(['type', 'data-cc-src', 'nonce']);
 
 function isActivated(el: Element): boolean {
   return el.getAttribute(ACTIVATED_ATTR) === 'true';
@@ -41,9 +43,13 @@ function isActivated(el: Element): boolean {
  * browser executes it. A fresh element is required — mutating `type` on an
  * existing script does not retroactively trigger execution.
  *
- * All other attributes (async, defer, nonce, integrity, crossorigin, …) are
+ * All other attributes (async, defer, integrity, crossorigin, …) are
  * preserved, so CSP nonces set on the placeholder flow through to the
- * injected script.
+ * injected script. `nonce` is special-cased: browsers hide the content
+ * attribute post-parse for security (CSP L3), so `getAttribute('nonce')`
+ * returns an empty string and only the `.nonce` IDL property holds the
+ * real value. Copy via the property so the injected script still matches
+ * the page CSP.
  */
 function activateScript(oldScript: HTMLScriptElement): void {
   if (isActivated(oldScript)) return;
@@ -53,6 +59,7 @@ function activateScript(oldScript: HTMLScriptElement): void {
     if (SCRIPT_SKIP_ATTRS.has(attr.name)) continue;
     newScript.setAttribute(attr.name, attr.value);
   }
+  if (oldScript.nonce) newScript.nonce = oldScript.nonce;
 
   const src = oldScript.getAttribute('data-cc-src');
   if (src) {
