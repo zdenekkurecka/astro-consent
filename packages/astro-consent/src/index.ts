@@ -6,4 +6,9 @@ export type {
   ConsentCategoryText,
   ConsentText,
   ConsentAPI,
+  GoogleConsentModeConfig,
+  GoogleConsentSignal,
+  GoogleConsentValue,
+  GoogleConsentDefaults,
+  GoogleConsentRegionValue,
 } from './types.js';

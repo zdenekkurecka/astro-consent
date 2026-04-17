@@ -24,6 +24,7 @@
   - [Trigger the UI from your own buttons](#trigger-the-ui-from-your-own-buttons)
   - [Open the preferences modal from a footer link](#open-the-preferences-modal-from-a-footer-link)
   - [Gate third-party scripts (GA, Meta Pixel, …)](#gate-third-party-scripts-ga-meta-pixel-)
+  - [Enable Google Consent Mode v2](#enable-google-consent-mode-v2)
   - [Re-prompt users after changing categories](#re-prompt-users-after-changing-categories)
   - [Customise banner & modal text (and localize it)](#customise-banner--modal-text-and-localize-it)
   - [Theme the UI](#theme-the-ui)
@@ -73,6 +74,9 @@ they force you to serialize your tracker callbacks into a JSON config.
   restoration, `Escape` to close, click-outside to dismiss
 - **Declarative script blocking** via `type="text/plain"` +
   `data-cc-category` — gate trackers and embeds without writing glue code
+- **Google Consent Mode v2** out of the box: opt-in config that maps your
+  categories to GCM signals, injects the default-denied snippet, and wires
+  `gtag('consent', 'update', …)` into the consent events
 - **Strict-CSP safe**: no inline `<script>`, no inline `<style>`
 - **View Transitions ready**: initializes on `DOMContentLoaded` *and*
   `astro:page-load`, idempotently
@@ -220,6 +224,16 @@ interface ConsentConfig {
    * built-in defaults.
    */
   localeText?: Record<string, ConsentText>;
+
+  /**
+   * Google Consent Mode v2 integration. When set, the integration injects an
+   * inline snippet at the top of `<head>` to pre-declare denied defaults, and
+   * auto-dispatches `gtag('consent', 'update', …)` on every consent event.
+   *
+   * Opt-in. Requires `'unsafe-inline'` (or a matching hash) under strict CSP —
+   * see [Enable Google Consent Mode v2](#enable-google-consent-mode-v2).
+   */
+  googleConsentMode?: GoogleConsentModeConfig;
 }
 
 interface ConsentText {
@@ -427,6 +441,98 @@ listen to the consent events directly:
     if (e.detail.categories.analytics) loadGA();
   });
 </script>
+```
+
+### Enable Google Consent Mode v2
+
+GA4, Google Ads, and every other Google tag need
+[Consent Mode v2](https://developers.google.com/tag-platform/security/concepts/consent-mode)
+to run legally in the EU. The integration ships first-class support: map your
+categories to GCM signals and the rest is handled for you.
+
+```ts
+cookieConsent({
+  version: 1,
+  categories: {
+    analytics: { label: 'Analytics', description: '…', default: false },
+    marketing: { label: 'Marketing', description: '…', default: false },
+  },
+  googleConsentMode: {
+    enabled: true,
+    mapping: {
+      analytics: ['analytics_storage'],
+      marketing: ['ad_storage', 'ad_user_data', 'ad_personalization'],
+    },
+    // Hint to GTM on how long to delay firing tags. Default 500ms.
+    waitForUpdate: 500,
+    // Optional: regional default overrides. Accepts either a single value
+    // (applied to every mapped signal) or a per-signal object.
+    regions: {
+      US: 'granted',
+      BR: { ad_storage: 'denied' },
+    },
+    // Optional Google flags, forwarded via gtag('set', …).
+    adsDataRedaction: true,
+    urlPassthrough: false,
+  },
+});
+```
+
+What the integration does for you:
+
+1. Injects an inline snippet at the top of `<head>` that bootstraps
+   `window.dataLayer` + `gtag` and calls `gtag('consent', 'default', { …,
+   wait_for_update: 500 })` with every mapped signal set to `"denied"` (unless
+   overridden via `defaults` / `regions`).
+2. On every `astro-consent:consent` or `astro-consent:change` event,
+   dispatches `gtag('consent', 'update', …)` with each signal set to
+   `"granted"` only when **every** category that maps to it is granted.
+3. Forwards `adsDataRedaction` / `urlPassthrough` as `gtag('set', …)` calls in
+   the default snippet.
+
+Drop your GA4 / Google Ads tag anywhere in your layout (or gate it via
+`data-cc-category` — the two compose) and it will pick up the consent state
+automatically:
+
+```astro
+<script
+  is:inline
+  async
+  src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXX"
+></script>
+<script is:inline>
+  gtag('js', new Date());
+  gtag('config', 'G-XXXXXXX');
+</script>
+```
+
+**CSP caveat.** The default snippet is inline, so enabling
+`googleConsentMode` requires `script-src` to include `'unsafe-inline'` or a
+matching hash/nonce. If you don't configure `googleConsentMode`, the
+integration stays strict-CSP-safe.
+
+```ts
+interface GoogleConsentModeConfig {
+  enabled?: boolean;                                          // default: true
+  mapping: Partial<Record<string, GoogleConsentSignal[]>>;
+  waitForUpdate?: number;                                     // default: 500
+  defaults?: Partial<Record<GoogleConsentSignal, 'granted' | 'denied'>>;
+  regions?: Record<string,
+    | 'granted' | 'denied'
+    | Partial<Record<GoogleConsentSignal, 'granted' | 'denied'>>
+  >;
+  adsDataRedaction?: boolean;
+  urlPassthrough?: boolean;
+}
+
+type GoogleConsentSignal =
+  | 'ad_storage'
+  | 'ad_user_data'
+  | 'ad_personalization'
+  | 'analytics_storage'
+  | 'functionality_storage'
+  | 'personalization_storage'
+  | 'security_storage';
 ```
 
 ### Re-prompt users after changing categories

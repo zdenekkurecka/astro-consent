@@ -1,5 +1,6 @@
 import type { AstroIntegration } from 'astro';
 import type { ConsentConfig, SerializableConsentConfig } from './types.js';
+import { buildGcmDefaultSnippet, validateGcmConfig } from './gcm.js';
 import { vitePluginConsentConfig } from './virtual-config.js';
 
 export default function cookieConsent<K extends string = string>(
@@ -21,6 +22,11 @@ export default function cookieConsent<K extends string = string>(
     );
   }
 
+  const gcm = userConfig.googleConsentMode;
+  if (gcm && gcm.enabled !== false) {
+    validateGcmConfig(gcm, Object.keys(userConfig.categories));
+  }
+
   const serializableConfig: SerializableConsentConfig<K> = {
     version: userConfig.version,
     categories: userConfig.categories,
@@ -31,6 +37,7 @@ export default function cookieConsent<K extends string = string>(
     ui: userConfig.ui,
     text: userConfig.text,
     localeText: userConfig.localeText,
+    googleConsentMode: userConfig.googleConsentMode,
   };
 
   return {
@@ -58,6 +65,14 @@ export default function cookieConsent<K extends string = string>(
         // a hashed <script type="module" src="..."> — not inline — so the
         // integration also works under strict script-src CSP.
         injectScript('page', 'import "virtual:astro-consent/init";');
+
+        // Google Consent Mode v2: inject the default-denied snippet inline
+        // at the top of <head> so `gtag('consent', 'default', …)` runs before
+        // any downstream GTM/gtag.js. This is the one case where we emit an
+        // inline <script> — opt-in and documented as a CSP caveat.
+        if (gcm && gcm.enabled !== false) {
+          injectScript('head-inline', buildGcmDefaultSnippet(gcm));
+        }
       },
     },
   };

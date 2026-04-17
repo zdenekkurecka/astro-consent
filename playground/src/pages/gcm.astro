@@ -1,0 +1,46 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Google Consent Mode v2">
+  <h1>Google Consent Mode v2</h1>
+  <p>
+    The <code>googleConsentMode</code> config emits a
+    <code>gtag('consent', 'default', …)</code> call inline at the top of
+    <code>&lt;head&gt;</code>, then bridges
+    <code>astro-consent:consent</code> / <code>astro-consent:change</code>
+    into <code>gtag('consent', 'update', …)</code>.
+  </p>
+
+  <p>
+    The test hooks below instrument <code>window.dataLayer</code> so Playwright
+    can assert the correct default + update sequence without pulling in the
+    real GTM script.
+  </p>
+
+  <pre id="dl-dump">dataLayer will appear here…</pre>
+
+  <script is:inline>
+    // Render current dataLayer contents on load + whenever consent events fire.
+    // Using `is:inline` so the dump survives view transitions.
+    function renderDataLayer() {
+      const el = document.getElementById('dl-dump');
+      if (!el) return;
+      try {
+        const serialized = (window.dataLayer || []).map((entry) => {
+          // `arguments`-shaped entries (from gtag(...)) are array-like.
+          if (entry && typeof entry === 'object' && typeof entry.length === 'number') {
+            return Array.from(entry);
+          }
+          return entry;
+        });
+        el.textContent = JSON.stringify(serialized, null, 2);
+      } catch (err) {
+        el.textContent = 'failed to render dataLayer: ' + err;
+      }
+    }
+    document.addEventListener('astro:page-load', renderDataLayer);
+    document.addEventListener('astro-consent:consent', renderDataLayer);
+    document.addEventListener('astro-consent:change', renderDataLayer);
+  </script>
+</Layout>

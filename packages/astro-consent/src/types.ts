@@ -4,6 +4,108 @@ export interface ConsentCategory {
   default: boolean;
 }
 
+/**
+ * Google Consent Mode v2 signals.
+ *
+ * @see https://developers.google.com/tag-platform/security/concepts/consent-mode
+ */
+export type GoogleConsentSignal =
+  | 'ad_storage'
+  | 'ad_user_data'
+  | 'ad_personalization'
+  | 'analytics_storage'
+  | 'functionality_storage'
+  | 'personalization_storage'
+  | 'security_storage';
+
+/** A Google Consent Mode v2 signal value. */
+export type GoogleConsentValue = 'granted' | 'denied';
+
+/**
+ * Per-signal default overrides, used both for the global default snippet and
+ * for regional overrides.
+ */
+export type GoogleConsentDefaults = Partial<
+  Record<GoogleConsentSignal, GoogleConsentValue>
+>;
+
+/**
+ * Regional default: either a single value applied to every mapped signal, or
+ * a per-signal map.
+ */
+export type GoogleConsentRegionValue = GoogleConsentValue | GoogleConsentDefaults;
+
+/**
+ * Google Consent Mode v2 configuration.
+ *
+ * When set, the integration injects an inline snippet at the top of `<head>`
+ * that bootstraps `window.dataLayer` + `gtag` and calls
+ * `gtag('consent', 'default', {...})` before any downstream GTM / gtag.js
+ * loads. Subsequent `astro-consent:consent` and `astro-consent:change` events
+ * automatically fire `gtag('consent', 'update', {...})` with the signals
+ * derived from `mapping`.
+ *
+ * The default snippet is inline and therefore requires `'unsafe-inline'` or a
+ * matching hash under strict CSP. This is opt-in — if you don't configure
+ * `googleConsentMode`, the integration stays strict-CSP-safe.
+ */
+export interface GoogleConsentModeConfig<K extends string = string> {
+  /**
+   * Set to `false` to temporarily disable the integration without deleting
+   * config. Treated the same as omitting `googleConsentMode`.
+   *
+   * @default true
+   */
+  enabled?: boolean;
+
+  /**
+   * Map each consent category key to one or more Google Consent Mode v2
+   * signals. A signal is granted only when **every** category that maps to it
+   * is granted, and denied otherwise. Signals that aren't mentioned in any
+   * mapping are never updated by the integration.
+   *
+   * @example
+   *   mapping: {
+   *     analytics: ['analytics_storage'],
+   *     marketing: ['ad_storage', 'ad_user_data', 'ad_personalization'],
+   *   }
+   */
+  mapping: Partial<Record<K | 'essential', GoogleConsentSignal[]>>;
+
+  /**
+   * Millisecond hint passed to GTM via `wait_for_update` in the default
+   * snippet. Tells GTM how long to delay firing tags while it waits for the
+   * first `gtag('consent', 'update', …)` call.
+   *
+   * @default 500
+   */
+  waitForUpdate?: number;
+
+  /**
+   * Override the initial signal values. Signals not listed here default to
+   * `"denied"` to stay compliant with GDPR/ePrivacy.
+   */
+  defaults?: GoogleConsentDefaults;
+
+  /**
+   * Regional overrides of `defaults`, keyed by ISO 3166-1 alpha-2 region
+   * codes (e.g. `"US"`) or subdivisions (e.g. `"US-CA"`). Each entry can be
+   * either a single value applied to every mapped signal, or a per-signal
+   * object. Emitted as additional `gtag('consent', 'default', { ..., region:
+   * ['XX'] })` calls after the global defaults.
+   *
+   * @example
+   *   regions: { US: 'granted', BR: { ad_storage: 'denied' } }
+   */
+  regions?: Record<string, GoogleConsentRegionValue>;
+
+  /** Forwarded as `gtag('set', 'ads_data_redaction', <bool>)`. */
+  adsDataRedaction?: boolean;
+
+  /** Forwarded as `gtag('set', 'url_passthrough', <bool>)`. */
+  urlPassthrough?: boolean;
+}
+
 export interface CookiePolicyLink {
   url: string;
   label?: string;
@@ -113,6 +215,16 @@ export interface ConsentConfig<K extends string = string> {
    * built-in defaults.
    */
   localeText?: Record<string, ConsentText<K>>;
+
+  /**
+   * Google Consent Mode v2 integration. When configured, an inline snippet
+   * is injected at the top of `<head>` to pre-declare denied defaults before
+   * any GTM/gtag.js loads, and consent events automatically translate into
+   * `gtag('consent', 'update', …)` calls.
+   *
+   * Opt-in — omit this to keep the integration strict-CSP safe.
+   */
+  googleConsentMode?: GoogleConsentModeConfig<K>;
 }
 
 export interface ConsentState<K extends string = string> {
@@ -131,6 +243,7 @@ export interface SerializableConsentConfig<K extends string = string> {
   ui?: ConsentUIConfig;
   text?: ConsentText<K>;
   localeText?: Record<string, ConsentText<K>>;
+  googleConsentMode?: GoogleConsentModeConfig<K>;
 }
 
 /**
