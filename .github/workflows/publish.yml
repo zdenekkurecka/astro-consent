@@ -129,7 +129,23 @@ jobs:
 
             # Only reconcile versions actually on npm. Avoids creating tags
             # for a version bump whose publish step failed.
-            if ! npm view "${name}@${version}" version >/dev/null 2>&1; then
+            #
+            # `changeset publish` reports success as soon as npm accepts the
+            # write, but the public registry read path has propagation lag
+            # (observed ~5-30s). Retry before declaring it unpublished so we
+            # don't flakily skip tag + release creation right after a fresh
+            # publish. A truly failed publish will still miss every attempt
+            # and fall through to `continue`, preserving the original guard.
+            published=""
+            for attempt in 1 2 3 4 5 6; do
+              if npm view "${name}@${version}" version >/dev/null 2>&1; then
+                published=1
+                break
+              fi
+              echo "npm view ${name}@${version} not visible yet (attempt ${attempt}/6) — retrying in 10s"
+              sleep 10
+            done
+            if [ -z "$published" ]; then
               echo "Skip ${name}@${version}: not published to npm yet"
               continue
             fi

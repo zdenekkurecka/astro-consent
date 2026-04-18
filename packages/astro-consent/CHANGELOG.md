@@ -1,5 +1,183 @@
 # @zdenekkurecka/astro-consent
 
+## 0.3.0
+
+### Minor Changes
+
+- [#69](https://github.com/zdenekkurecka/astro-consent/pull/69) [`35f3f80`](https://github.com/zdenekkurecka/astro-consent/commit/35f3f802182ac94d46aa78fb8aaee25f11dce2d0) Thanks [@zdenekkurecka](https://github.com/zdenekkurecka)! - Added `<ConsentScript>` Astro component for category-gated scripts.
+
+  Ship at `@zdenekkurecka/astro-consent/components`, wraps the existing
+  `type="text/plain"` + `data-cc-category` markup with a named-prop API that
+  the declarative blocking runtime already knows how to activate.
+
+  ```astro
+  ---
+  import { ConsentScript } from '@zdenekkurecka/astro-consent/components';
+  ---
+
+  <!-- External — renders as type="text/plain" with data-cc-src -->
+  <ConsentScript
+    category="analytics"
+    src="https://www.googletagmanager.com/gtag/js?id=G-XXX"
+    async
+  />
+
+  <!-- Inline — slot content becomes the script body -->
+  <ConsentScript category="analytics">
+    {`gtag('js', new Date()); gtag('config', 'G-XXX');`}
+  </ConsentScript>
+  ```
+
+  Any other `<script>` attributes (`defer`, `nonce`, `integrity`, `crossorigin`,
+  …) pass through to the placeholder and survive activation. `is:inline` is
+  applied automatically so Astro leaves the placeholder markup intact.
+
+  Closes #21.
+
+- [#69](https://github.com/zdenekkurecka/astro-consent/pull/69) [`b1cac4b`](https://github.com/zdenekkurecka/astro-consent/commit/b1cac4b03e0241dcdcbda9607fe62bfad0c1077f) Thanks [@zdenekkurecka](https://github.com/zdenekkurecka)! - Declarative script blocking via `data-cc-category` / `data-cc-src`.
+
+  Third-party scripts and embeds can now be gated with markup instead of
+  bespoke event listeners. Mark a placeholder with `type="text/plain"` and a
+  category — the integration activates it once consent is granted.
+
+  ```astro
+  <script
+    is:inline
+    type="text/plain"
+    data-cc-category="analytics"
+    data-cc-src="https://www.googletagmanager.com/gtag/js?id=G-XXX"
+    async
+  ></script>
+
+  <iframe data-cc-category="marketing" data-cc-src="…"></iframe>
+  ```
+
+  Supports external scripts (`data-cc-src`), inline bodies, and iframe embeds.
+  Covers both the initial scan on `astro-consent:consent` / `:change` and a
+  `MutationObserver` for elements inserted after the first scan. All other
+  attributes (`async`, `defer`, `nonce`, `integrity`, `crossorigin`, …) flow
+  through to the activated script. Activated elements are marked with
+  `data-cc-activated="true"`.
+
+  The event-based hook (`document.addEventListener('astro-consent:consent', …)`)
+  is still the right choice when you need custom bootstrap or teardown logic;
+  the two approaches compose.
+
+  Note: activation is one-way within a page lifecycle — once a tracker runs,
+  the integration cannot unload it. Revoking a category stops future loads
+  (e.g. after a full reload or on pages that haven't scanned yet) but does
+  not tear down already-executed code.
+
+- [#69](https://github.com/zdenekkurecka/astro-consent/pull/69) [`4b97506`](https://github.com/zdenekkurecka/astro-consent/commit/4b97506b2efa6a5277aa2ada9844ce9d0d09c955) Thanks [@zdenekkurecka](https://github.com/zdenekkurecka)! - Type-safe category keys via generic config.
+
+  `ConsentConfig`, `ConsentState`, and `ConsentText` now take an optional
+  `K extends string` generic that narrows `categories` (and `text.categories`)
+  to the literal keys you defined. When you pass a config to `cookieConsent`,
+  TypeScript infers `K` from the `categories` map — so typos in downstream
+  lookups are caught and autocompletion suggests the right keys.
+
+  ```ts
+  const config = {
+    version: 1,
+    categories: {
+      analytics: { label: "Analytics", description: "…", default: false },
+      marketing: { label: "Marketing", description: "…", default: false },
+    },
+  } satisfies ConsentConfig<"analytics" | "marketing">;
+
+  // state.categories.analyitcs → type error, with a "did you mean 'analytics'?" hint
+  ```
+
+  The generic defaults to `string`, so existing code keeps compiling unchanged.
+  End-to-end typing of the `astro-consent:consent` / `:change` event payload
+  and `window.astroConsent` is available via the `ConsentKeys` augmentation
+  pattern — see the Events / "Typed category keys" section in the README.
+
+- [#69](https://github.com/zdenekkurecka/astro-consent/pull/69) [`87caa46`](https://github.com/zdenekkurecka/astro-consent/commit/87caa468153ef6c45261ec103fda00a163bad956) Thanks [@zdenekkurecka](https://github.com/zdenekkurecka)! - First-class Google Consent Mode v2 support via a new `googleConsentMode`
+  config option.
+
+  When configured, the integration:
+
+  1. Injects an inline snippet at the top of `<head>` that bootstraps
+     `window.dataLayer` + `gtag` and calls `gtag('consent', 'default', …)` with
+     every mapped signal denied (plus `wait_for_update`).
+  2. Bridges `astro-consent:consent` / `astro-consent:change` into
+     `gtag('consent', 'update', …)` automatically — a signal is granted only
+     when every category that maps to it is granted (AND semantics).
+  3. Forwards `adsDataRedaction` / `urlPassthrough` via `gtag('set', …)`.
+  4. Emits one additional default per `regions` entry so CCPA-style opt-out
+     markets (e.g. `regions: { US: 'granted' }`) start granted.
+
+  ```ts
+  cookieConsent({
+    version: 1,
+    categories: {
+      /* … */
+    },
+    googleConsentMode: {
+      mapping: {
+        analytics: ["analytics_storage"],
+        marketing: ["ad_storage", "ad_user_data", "ad_personalization"],
+      },
+      waitForUpdate: 500,
+      regions: { US: "granted" },
+      adsDataRedaction: true,
+    },
+  });
+  ```
+
+  The feature is opt-in; omitting `googleConsentMode` keeps the integration
+  strict-CSP-safe. Enabling it requires `script-src` to include
+  `'unsafe-inline'` (or a matching hash) because the default snippet must run
+  synchronously before any GTM/gtag.js loads.
+
+- [#69](https://github.com/zdenekkurecka/astro-consent/pull/69) [`1dbb0fd`](https://github.com/zdenekkurecka/astro-consent/commit/1dbb0fd6635f2bf7e19ea49d7e99456d33c5f847) Thanks [@zdenekkurecka](https://github.com/zdenekkurecka)! - Typed event listeners and runtime API via `ConsentKeys` augmentation.
+
+  Drop a project-level `.d.ts` to make every `astro-consent:consent` /
+  `:change` listener and `window.astroConsent` narrow to your declared
+  category keys:
+
+  ```ts
+  // src/astro-consent.d.ts
+  declare module "@zdenekkurecka/astro-consent" {
+    interface ConsentKeys {
+      analytics: true;
+      marketing: true;
+    }
+  }
+  export {};
+  ```
+
+  With the augmentation in place, `e.detail.categories.analyitcs` and
+  `window.astroConsent?.set({ analyitcs: true })` become compile-time errors,
+  and autocompletion suggests the declared keys. Without it, both fall back
+  to `Record<string, boolean>` — same behaviour as before.
+
+  Also re-exports `ConsentEvent`, `ConsentKeys`, `ResolvedConsentKeys`,
+  `CONSENT_EVENT`, and `CHANGE_EVENT` from the package entry so consumers
+  don't need to import from internal paths.
+
+  Closes #70, #71.
+
+### Patch Changes
+
+- [#69](https://github.com/zdenekkurecka/astro-consent/pull/69) [`2301140`](https://github.com/zdenekkurecka/astro-consent/commit/230114085e2cf7d33dea853193ccdbfe2b02a1a7) Thanks [@zdenekkurecka](https://github.com/zdenekkurecka)! - Fix two regressions surfaced during the v0.3.0 code review:
+
+  - **Event type on re-accept/re-reject.** When a user re-opened the banner
+    or preferences modal after already consenting (e.g. via
+    `window.astroConsent.show()` / `showPreferences()`) and clicked
+    "Accept all" / "Reject all", the integration dispatched
+    `astro-consent:consent` again instead of `astro-consent:change`. The
+    `save-preferences` path already discriminated correctly; the two
+    accept/reject branches now follow the same rule.
+
+  - **CSP nonce lost on script activation.** Declarative blocking cloned
+    placeholder `<script>` elements via `getAttribute`/`setAttribute`, but
+    CSP L3 hides the `nonce` content attribute post-parse so the copy
+    landed as an empty string and the activated script was blocked by a
+    nonce'd CSP. The runtime now copies the nonce via the `.nonce` IDL
+    property so the injected script matches the page policy.
+
 ## 0.2.2
 
 ### Patch Changes
