@@ -434,8 +434,13 @@ export function isModalVisible(): boolean {
   return document.getElementById(MODAL_ID)?.classList.contains('cc-visible') ?? false;
 }
 
+// Scoped to `#cc-modal input[data-cc-category]` so declarative script-blocking
+// markup (which reuses `data-cc-category` on <script>/<iframe> elements)
+// doesn't leak into modal state reads.
+const MODAL_TOGGLE_SELECTOR = `#${MODAL_ID} input[data-cc-category]`;
+
 export function updateModalToggles(categories: Record<string, boolean>): void {
-  const inputs = document.querySelectorAll<HTMLInputElement>('[data-cc-category]');
+  const inputs = document.querySelectorAll<HTMLInputElement>(MODAL_TOGGLE_SELECTOR);
   for (const input of inputs) {
     const key = input.getAttribute('data-cc-category');
     if (key && !input.disabled) {
@@ -446,7 +451,7 @@ export function updateModalToggles(categories: Record<string, boolean>): void {
 
 export function getModalSelections(): Record<string, boolean> {
   const selections: Record<string, boolean> = {};
-  const inputs = document.querySelectorAll<HTMLInputElement>('[data-cc-category]');
+  const inputs = document.querySelectorAll<HTMLInputElement>(MODAL_TOGGLE_SELECTOR);
   for (const input of inputs) {
     const key = input.getAttribute('data-cc-category');
     if (key && key !== 'essential') {

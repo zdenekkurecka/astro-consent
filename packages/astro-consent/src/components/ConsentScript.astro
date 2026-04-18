@@ -1,0 +1,82 @@
+---
+import type { HTMLAttributes } from 'astro/types';
+
+/**
+ * Emits a consent-gated `<script type="text/plain">` placeholder that the
+ * runtime in `scripts.ts` activates once the given category is granted. The
+ * rendered markup is identical to what you'd write by hand:
+ *
+ *   <script is:inline type="text/plain"
+ *           data-cc-category="analytics"
+ *           data-cc-src="https://www.googletagmanager.com/gtag/js?id=G-XXX"></script>
+ *
+ * External form — provide `src`:
+ *
+ *   <ConsentScript category="analytics"
+ *                  src="https://www.googletagmanager.com/gtag/js?id=G-XXX" />
+ *
+ * Inline form — omit `src` and pass the body as a child expression:
+ *
+ *   <ConsentScript category="analytics">
+ *     {`gtag("js", new Date()); gtag("config", "G-XXX");`}
+ *   </ConsentScript>
+ *
+ * All remaining `<script>` attributes (`async`, `defer`, `nonce`, `integrity`,
+ * `crossorigin`, …) are forwarded to the placeholder and survive activation.
+ * `is:inline` is applied automatically so Astro leaves the placeholder body
+ * alone instead of bundling it as a module.
+ *
+ * Inline script bodies land in the placeholder verbatim — don't write HTML
+ * entity references (`&lt;`, `&amp;`, …) directly; use JS escape sequences
+ * (`"\u003c"`, `"\u0026"`) if you need those characters literally.
+ */
+
+type ScriptAttrs = Omit<HTMLAttributes<'script'>, 'src' | 'type' | 'is:inline'>;
+
+interface Props extends ScriptAttrs {
+  /** Consent category key that must be granted before this script loads. */
+  category: string;
+  /**
+   * External script URL. Omit to use the slot content as an inline script
+   * body (requires `'unsafe-inline'` or a CSP nonce).
+   */
+  src?: string;
+}
+
+const { category, src, ...rest } = Astro.props;
+
+// Astro renders slot content as HTML and escapes `"` / `'` / `<` / `>` / `&`.
+// A `<script>` placeholder body is JS source, not HTML, so the escaping must
+// be reversed before injection — otherwise `el.setAttribute('x', 'y')` in the
+// caller's source lands as `el.setAttribute(&#39;x&#39;, &#39;y&#39;)` and
+// syntax-errors the moment the runtime activates the script.
+function decodeScriptBody(s: string): string {
+  return s
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
+}
+
+const body = src ? '' : decodeScriptBody(await Astro.slots.render('default'));
+---
+{
+  src ? (
+    <script
+      is:inline
+      type="text/plain"
+      data-cc-category={category}
+      data-cc-src={src}
+      {...rest}
+    />
+  ) : (
+    <script
+      is:inline
+      type="text/plain"
+      data-cc-category={category}
+      set:html={body}
+      {...rest}
+    />
+  )
+}

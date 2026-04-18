@@ -1,0 +1,82 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="Google Consent Mode v2">
+  <!--
+    Real gtag.js load with a fake-but-format-valid Measurement ID so /g/collect
+    and ads/ga-audiences requests actually attempt to fire in the browser
+    Network tab for manual GCM verification. Google rejects the unknown ID
+    server-side, but the client-side request still happens — which is exactly
+    what the PR69 manual test item checks for.
+  -->
+  <script is:inline async src="https://www.googletagmanager.com/gtag/js?id=G-PLAYGRNDXX"></script>
+  <script is:inline>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'G-PLAYGRNDXX');
+    // Google Ads tag: fake AW-* ID so gtag.js attempts the ads/ga-audiences
+    // remarketing ping once ad_storage is granted. GA4's own `/g/collect`
+    // does not fire ads/ga-audiences unless the property is linked to Google
+    // Ads server-side, which a fake G-* ID can't simulate — the AW tag is the
+    // reliable client-side trigger.
+    gtag('config', 'AW-1234567890');
+  </script>
+
+  <h1>Google Consent Mode v2</h1>
+  <p>
+    The <code>googleConsentMode</code> config emits a
+    <code>gtag('consent', 'default', …)</code> call inline at the top of
+    <code>&lt;head&gt;</code>, then bridges
+    <code>astro-consent:consent</code> / <code>astro-consent:change</code>
+    into <code>gtag('consent', 'update', …)</code>.
+  </p>
+
+  <p>
+    The test hooks below instrument <code>window.dataLayer</code> so Playwright
+    can assert the correct default + update sequence without pulling in the
+    real GTM script.
+  </p>
+
+  <p>
+    <button type="button" id="fire-test-event">Fire test event</button>
+    — sends <code>gtag('event', 'manual_test')</code>, useful for triggering a
+    fresh <code>/g/collect</code> hit after accepting consent (the initial
+    pageview is usually already cookieless-pinged past <code>wait_for_update</code>).
+  </p>
+
+  <pre id="dl-dump">dataLayer will appear here…</pre>
+
+  <script is:inline>
+    // Render current dataLayer contents on load + whenever consent events fire.
+    // Using `is:inline` so the dump survives view transitions.
+    function renderDataLayer() {
+      const el = document.getElementById('dl-dump');
+      if (!el) return;
+      try {
+        const serialized = (window.dataLayer || []).map((entry) => {
+          // `arguments`-shaped entries (from gtag(...)) are array-like.
+          if (entry && typeof entry === 'object' && typeof entry.length === 'number') {
+            return Array.from(entry);
+          }
+          return entry;
+        });
+        el.textContent = JSON.stringify(serialized, null, 2);
+      } catch (err) {
+        el.textContent = 'failed to render dataLayer: ' + err;
+      }
+    }
+    document.addEventListener('astro:page-load', renderDataLayer);
+    document.addEventListener('astro-consent:consent', renderDataLayer);
+    document.addEventListener('astro-consent:change', renderDataLayer);
+
+    document.addEventListener('click', (e) => {
+      const target = e.target;
+      if (target && target.id === 'fire-test-event' && typeof window.gtag === 'function') {
+        window.gtag('event', 'manual_test', { source: 'playground' });
+        renderDataLayer();
+      }
+    });
+  </script>
+</Layout>
