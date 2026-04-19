@@ -397,7 +397,7 @@
   font-weight: 500;
   font-family: var(--cc-font-family);
   line-height: 1.5;
-  border-radius: var(--cc-radius-pill);
+  border-radius: var(--cc-radius-sm);
   border: 1px solid transparent;
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
@@ -452,6 +452,11 @@
 .cc-modal-policy-link {
   margin: 0;
   color: var(--cc-text-muted);
+  /* System monospace stack — no custom web font shipped with the library, so
+   * we lean on the OS defaults (SF Mono on macOS, Consolas on Windows, etc.). */
+  font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
 }
 
 .cc-modal-policy-link:hover {
