@@ -1,5 +1,88 @@
 # @zdenekkurecka/astro-consent
 
+## 0.4.0
+
+### Minor Changes
+
+- [#86](https://github.com/zdenekkurecka/astro-consent/pull/86) [`e5a51bb`](https://github.com/zdenekkurecka/astro-consent/commit/e5a51bb9693eb294f94f2a5af486cb5839c14796) Thanks [@zdenekkurecka](https://github.com/zdenekkurecka)! - Four banner layout variants — `bar`, `box`, `cloud`, `popup` — with configurable position. Default remains `bar` + `bottom`, so existing installations don't shift visually after upgrade.
+
+  ```ts
+  cookieConsent({
+    version: 1,
+    categories: {
+      /* ... */
+    },
+    ui: {
+      banner: {
+        layout: "box", // 'bar' | 'box' | 'cloud' | 'popup'
+        position: "bottom-right",
+        scrim: false, // cloud-only passthrough; popup always on, bar/box always off
+      },
+    },
+  });
+  ```
+
+  Position validity per layout — invalid combinations fall back to the layout's default and emit a `console.warn` in dev:
+
+  | Layout  | Valid positions                                        |
+  | ------- | ------------------------------------------------------ |
+  | `bar`   | `top`, `bottom`                                        |
+  | `box`   | `top-left`, `top-right`, `bottom-left`, `bottom-right` |
+  | `cloud` | `top`, `bottom`                                        |
+  | `popup` | `center`                                               |
+
+  New CSS custom properties: `--cc-banner-max-width`, `--cc-box-width`, `--cc-popup-width`, `--cc-banner-offset`. All layouts are driven by `data-cc-layout` / `data-cc-position` / `data-cc-scrim` attributes on the banner root, so consumers can override layouts with their own CSS without forking the integration.
+
+  Closes #39.
+
+- [#87](https://github.com/zdenekkurecka/astro-consent/pull/87) [`ea70f66`](https://github.com/zdenekkurecka/astro-consent/commit/ea70f66ece191ebb7dee501f3b87e4794202f9ff) Thanks [@zdenekkurecka](https://github.com/zdenekkurecka)! - Single-layer consent flow: category toggles can now be rendered directly on the banner, eliminating the modal click for sites with few categories.
+
+  ```ts
+  cookieConsent({
+    version: 1,
+    categories: {
+      /* ... */
+    },
+    ui: {
+      banner: {
+        layout: "cloud",
+        categoriesOnBanner: true,
+      },
+    },
+  });
+  ```
+
+  The banner starts collapsed. Clicking **Customize** expands it in place, revealing the toggles and morphing the action labels (Customize ↔ Hide preferences, Accept all ↔ Save preferences). The "Reject optional" button fades and collapses to zero width once expanded — it's redundant when the user has direct switch control.
+
+  A new `×` close button (label: `text.dismissAriaLabel`) lets the user dismiss the banner without recording consent; it returns on the next page load.
+
+  `window.astroConsent.showPreferences()` flips the banner into expanded mode instead of opening the modal — the modal is not injected at all in single-layer mode.
+
+  Layout fit:
+
+  | Layout  | Recommended for single-layer? |
+  | ------- | ----------------------------- |
+  | `cloud` | yes                           |
+  | `popup` | yes                           |
+  | `bar`   | works, tighter                |
+  | `box`   | not recommended (too narrow)  |
+
+  New text keys: `hidePreferences` (default `"Hide preferences"`) and `dismissAriaLabel` (default `"Dismiss"`). Behavior with `categoriesOnBanner: false` is unchanged.
+
+  Closes #44.
+
+- [#83](https://github.com/zdenekkurecka/astro-consent/pull/83) [`7101c11`](https://github.com/zdenekkurecka/astro-consent/commit/7101c1121c4e822ef7cf208372b2889c5b7323bb) Thanks [@zdenekkurecka](https://github.com/zdenekkurecka)! - Visual design refresh: layered card surface with backdrop blur, custom switch component, category badges (Required / Optional), and `prefers-reduced-motion` support.
+
+  New design tokens extend the existing palette — `--cc-surface-2`, `--cc-stroke-2`, `--cc-text-dim`, `--cc-text-mute`, `--cc-accent-ink`, `--cc-aura-1`, `--cc-aura-2`, `--cc-radius-sm`, `--cc-radius-xs`, and `--cc-shadow-card` — all shipped as hex (including 8-digit hex for alpha) with light and dark defaults.
+
+  **Changed.** Category toggles now render as `<div role="switch" aria-checked="…" data-cc-category="…">` instead of a hidden `<input type="checkbox">` inside a `<label class="cc-toggle">`. Consumers who deep-style the toggle with `.cc-toggle input[type="checkbox"]` / `.cc-toggle-slider` selectors must migrate to `.cc-switch` / `.cc-switch[aria-checked="true"]`. Keyboard behaviour is preserved: `Space` / `Enter` flip the switch. `aria-disabled="true"` replaces `disabled` on the locked essential category.
+
+  Two new text keys — `text.badgeRequired` (default `"Required"`) and `text.badgeOptional` (default `"Optional"`) — control the category badges. The existing `text.essentialBadge` is now deprecated and kept as a fallback for `badgeRequired` only, so existing configs keep rendering the same label.
+
+### Patch Changes
+
+- [#85](https://github.com/zdenekkurecka/astro-consent/pull/85) [`5ef2b53`](https://github.com/zdenekkurecka/astro-consent/commit/5ef2b539102b473104aed20bbc07861167b451ba) Thanks [@zdenekkurecka](https://github.com/zdenekkurecka)! - Internal refactor: derive surface, aura, stroke, text, and primary-hover tokens from three inputs (`--cc-primary`, `--cc-tone`, `--cc-text`) via `color-mix()`. Rebranding the card now touches three tokens instead of ten; every previously shipped token remains overridable as an escape hatch. No visual change and no config surface change.
+
 ## 0.3.0
 
 ### Minor Changes
