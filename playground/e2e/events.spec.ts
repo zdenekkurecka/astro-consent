@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { clearConsent } from './helpers';
+import { clearConsent, sel } from './helpers';
 
 test.describe('Events', () => {
   test.beforeEach(async ({ page }) => {
@@ -20,7 +20,7 @@ test.describe('Events', () => {
         }),
     );
 
-    await page.locator('[data-cc=accept-all]').click();
+    await page.locator(sel.acceptAll()).click();
 
     const detail = await eventPromise;
     expect(detail.version).toBe(1);
@@ -28,7 +28,7 @@ test.describe('Events', () => {
   });
 
   test('astro-consent:consent fires on page load with existing consent', async ({ page }) => {
-    await page.locator('[data-cc=accept-all]').click();
+    await page.locator(sel.acceptAll()).click();
 
     // Register listener before the next navigation so we catch the event
     // fired during init on the fresh page.
@@ -55,7 +55,7 @@ test.describe('Events', () => {
   });
 
   test('astro-consent:change fires when updating preferences', async ({ page }) => {
-    await page.locator('[data-cc=accept-all]').click();
+    await page.locator(sel.acceptAll()).click();
 
     const changePromise = page.evaluate(
       () =>
@@ -70,8 +70,8 @@ test.describe('Events', () => {
 
     await page.evaluate(() => window.astroConsent?.showPreferences());
     // Hidden input — click the wrapping label to toggle it off.
-    await page.locator('label.cc-toggle:has([data-cc-category=marketing])').click();
-    await page.locator('[data-cc=save-preferences]').click();
+    await page.locator(sel.toggleLabel('marketing')).click();
+    await page.locator(sel.savePreferences()).click();
 
     const detail = await changePromise;
     expect(detail.categories.marketing).toBe(false);

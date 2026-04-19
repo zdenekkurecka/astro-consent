@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { clearConsent } from './helpers';
+import { clearConsent, sel } from './helpers';
 
 test.describe('Declarative script blocking', () => {
   test.beforeEach(async ({ page }) => {
@@ -10,7 +10,7 @@ test.describe('Declarative script blocking', () => {
 
   test('blocked scripts stay inert before consent', async ({ page }) => {
     // Banner is still up — no category has been granted yet.
-    await expect(page.locator('#cc-banner')).toHaveClass(/cc-visible/);
+    await expect(page.locator(sel.banner())).toHaveClass(/cc-visible/);
 
     expect(await page.evaluate(() => (window as any).__ccInlineLoaded)).toBeUndefined();
     expect(await page.evaluate(() => (window as any).__ccExternalLoaded)).toBeUndefined();
@@ -21,7 +21,7 @@ test.describe('Declarative script blocking', () => {
   });
 
   test('accept-all activates every blocked resource', async ({ page }) => {
-    await page.locator('[data-cc=accept-all]').click();
+    await page.locator(sel.acceptAll()).click();
 
     await expect(page.locator('#inline-marker')).toHaveAttribute('data-loaded', 'true');
     await expect(page.locator('#ext-marker')).toHaveAttribute('data-loaded', 'true');
@@ -37,9 +37,9 @@ test.describe('Declarative script blocking', () => {
 
   test('rejected category stays blocked', async ({ page }) => {
     // Accept analytics only via the modal. Marketing should remain blocked.
-    await page.locator('[data-cc=manage]').click();
-    await page.locator('label.cc-toggle:has([data-cc-category=analytics])').click();
-    await page.locator('[data-cc=save-preferences]').click();
+    await page.locator(sel.manage()).click();
+    await page.locator(sel.toggleLabel('analytics')).click();
+    await page.locator(sel.savePreferences()).click();
 
     await expect(page.locator('#inline-marker')).toHaveAttribute('data-loaded', 'true');
     await expect(page.locator('#marketing-marker')).toHaveAttribute('data-loaded', 'false');
@@ -52,7 +52,7 @@ test.describe('Declarative script blocking', () => {
   });
 
   test('existing consent activates scripts on reload', async ({ page }) => {
-    await page.locator('[data-cc=accept-all]').click();
+    await page.locator(sel.acceptAll()).click();
     await page.reload();
 
     // No banner, activation happens via the initial CONSENT event on init.
@@ -61,7 +61,7 @@ test.describe('Declarative script blocking', () => {
   });
 
   test('MutationObserver activates dynamically-inserted scripts', async ({ page }) => {
-    await page.locator('[data-cc=accept-all]').click();
+    await page.locator(sel.acceptAll()).click();
 
     await expect(page.locator('#dynamic-marker')).toHaveAttribute('data-loaded', 'false');
 
@@ -72,7 +72,7 @@ test.describe('Declarative script blocking', () => {
   });
 
   test('dynamically-inserted script stays blocked when category is denied', async ({ page }) => {
-    await page.locator('[data-cc=reject-all]').click();
+    await page.locator(sel.rejectAll()).click();
 
     await page.locator('#btn-insert').click();
 

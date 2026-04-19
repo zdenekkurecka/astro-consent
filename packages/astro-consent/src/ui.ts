@@ -178,7 +178,7 @@ function createPolicyLinkHTML(
 function createBannerHTML(config: SerializableConsentConfig, text: ResolvedConsentText): string {
   const policyLink = createPolicyLinkHTML(config.cookiePolicy, 'cc-policy-link');
   return `
-    <div class="cc-banner" id="${BANNER_ID}" role="region" aria-label="Cookie consent" aria-hidden="true">
+    <div class="cc-banner" id="${BANNER_ID}" data-testid="cc-banner" role="region" aria-label="Cookie consent" aria-hidden="true">
       <div class="cc-banner-inner">
         <p class="cc-banner-text">
           ${escapeHtml(text.bannerText)}
@@ -242,10 +242,11 @@ function createModalHTML(config: SerializableConsentConfig, text: ResolvedConsen
   const policyLink = createPolicyLinkHTML(config.cookiePolicy, 'cc-policy-link cc-modal-policy-link');
 
   return `
-    <div class="cc-overlay" id="${OVERLAY_ID}" aria-hidden="true"></div>
+    <div class="cc-overlay" id="${OVERLAY_ID}" data-testid="cc-overlay" aria-hidden="true"></div>
     <div
       class="cc-modal"
       id="${MODAL_ID}"
+      data-testid="cc-modal"
       role="dialog"
       aria-modal="true"
       aria-labelledby="${MODAL_TITLE_ID}"
