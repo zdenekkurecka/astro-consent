@@ -63,6 +63,9 @@ import Layout from '../layouts/Layout.astro';
   <div class="controls" data-cc-picker="scrim">
     <button data-val="toggle">toggle scrim</button>
   </div>
+  <div class="controls" data-cc-picker="categories-on-banner">
+    <button data-val="toggle">toggle categories on banner</button>
+  </div>
 
   <h2>Current State</h2>
   <pre id="state">No consent data yet.</pre>
@@ -226,6 +229,20 @@ import Layout from '../layouts/Layout.astro';
           const banner = document.getElementById('cc-banner');
           const current = banner?.getAttribute('data-cc-scrim') === 'true';
           applyBannerVariant(undefined, undefined, !current);
+        });
+
+      // categoriesOnBanner is resolved at injectUI time and changes the
+      // banner's structure (categories markup, dismiss button, label
+      // morphing), so we can't toggle it live — flip the URL param and let
+      // the page reload re-inject the banner with the new shape.
+      document
+        .querySelector('[data-cc-picker="categories-on-banner"]')
+        ?.addEventListener('click', () => {
+          const url = new URL(window.location.href);
+          const current = url.searchParams.get('categoriesOnBanner') === 'true';
+          if (current) url.searchParams.delete('categoriesOnBanner');
+          else url.searchParams.set('categoriesOnBanner', 'true');
+          window.location.href = url.toString();
         });
     });
   </script>
