@@ -147,6 +147,32 @@ export function initConsentManager(config: SerializableConsentConfig): void {
   if (!listenerAttached) {
     listenerAttached = true;
 
+    // Custom [role="switch"] toggles — no native input, so we handle click +
+    // Space/Enter explicitly. Scoped to the modal so script-blocking markup
+    // that reuses `data-cc-category` on <script>/<iframe> can't match.
+    const toggleSwitch = (sw: HTMLElement): void => {
+      if (sw.getAttribute('data-locked') === 'true') return;
+      const next = sw.getAttribute('aria-checked') !== 'true';
+      sw.setAttribute('aria-checked', next ? 'true' : 'false');
+    };
+
+    document.addEventListener('click', (e) => {
+      const sw = (e.target as HTMLElement).closest<HTMLElement>(
+        '#cc-modal [role="switch"][data-cc-category]',
+      );
+      if (sw) toggleSwitch(sw);
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== ' ' && e.key !== 'Enter') return;
+      const sw = (e.target as HTMLElement).closest<HTMLElement>(
+        '#cc-modal [role="switch"][data-cc-category]',
+      );
+      if (!sw) return;
+      e.preventDefault();
+      toggleSwitch(sw);
+    });
+
     document.addEventListener('click', (e) => {
       const target = (e.target as HTMLElement).closest<HTMLElement>('[data-cc]');
       if (!target) return;

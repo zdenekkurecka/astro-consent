@@ -7,12 +7,25 @@
   --cc-primary-hover: #1d4ed8;
   --cc-bg: #ffffff;
   --cc-surface: #f8fafc;
+  --cc-surface-2: #ffffffe6;
   --cc-tint-rgb: 0, 0, 0;
   --cc-text: #0f172a;
   --cc-text-muted: #64748b;
+  --cc-text-dim: #475569;
+  --cc-text-mute: #94a3b8;
   --cc-border: #e2e8f0;
+  --cc-stroke-2: #cbd5e1;
+  --cc-accent-ink: #ffffff;
+  --cc-aura-1: #3b82f614;
+  --cc-aura-2: #2563eb0a;
   --cc-radius: 1.5rem;
+  --cc-radius-sm: 0.5rem;
+  --cc-radius-xs: 0.25rem;
   --cc-radius-pill: 9999px;
+  --cc-shadow-card:
+    inset 0 1px 0 #ffffff14,
+    0 24px 64px #0f172a26,
+    0 4px 16px #0f172a1a;
   --cc-font-family: inherit;
 }
 
@@ -28,10 +41,21 @@
     --cc-primary-hover: #60a5fa;
     --cc-bg: #1e293b;
     --cc-surface: #334155;
+    --cc-surface-2: #1e293be6;
     --cc-tint-rgb: 255, 255, 255;
     --cc-text: #f1f5f9;
     --cc-text-muted: #94a3b8;
+    --cc-text-dim: #cbd5e1;
+    --cc-text-mute: #94a3b8;
     --cc-border: #475569;
+    --cc-stroke-2: #64748b;
+    --cc-accent-ink: #ffffff;
+    --cc-aura-1: #3b82f629;
+    --cc-aura-2: #60a5fa14;
+    --cc-shadow-card:
+      inset 0 1px 0 #ffffff0f,
+      0 24px 64px #00000080,
+      0 4px 16px #0000004d;
   }
 }
 
@@ -47,10 +71,21 @@
   --cc-primary-hover: #1d4ed8;
   --cc-bg: #ffffff;
   --cc-surface: #f8fafc;
+  --cc-surface-2: #ffffffe6;
   --cc-tint-rgb: 0, 0, 0;
   --cc-text: #0f172a;
   --cc-text-muted: #64748b;
+  --cc-text-dim: #475569;
+  --cc-text-mute: #94a3b8;
   --cc-border: #e2e8f0;
+  --cc-stroke-2: #cbd5e1;
+  --cc-accent-ink: #ffffff;
+  --cc-aura-1: #3b82f614;
+  --cc-aura-2: #2563eb0a;
+  --cc-shadow-card:
+    inset 0 1px 0 #ffffff14,
+    0 24px 64px #0f172a26,
+    0 4px 16px #0f172a1a;
 }
 
 :where([data-cc-theme='dark']) {
@@ -58,10 +93,21 @@
   --cc-primary-hover: #60a5fa;
   --cc-bg: #1e293b;
   --cc-surface: #334155;
+  --cc-surface-2: #1e293be6;
   --cc-tint-rgb: 255, 255, 255;
   --cc-text: #f1f5f9;
   --cc-text-muted: #94a3b8;
+  --cc-text-dim: #cbd5e1;
+  --cc-text-mute: #94a3b8;
   --cc-border: #475569;
+  --cc-stroke-2: #64748b;
+  --cc-accent-ink: #ffffff;
+  --cc-aura-1: #3b82f629;
+  --cc-aura-2: #60a5fa14;
+  --cc-shadow-card:
+    inset 0 1px 0 #ffffff0f,
+    0 24px 64px #00000080,
+    0 4px 16px #0000004d;
 }
 
 /* ── Banner ─────────────────────────────────────────────── */
@@ -72,8 +118,14 @@
   left: 0;
   right: 0;
   z-index: 9999;
-  background-color: var(--cc-bg);
-  border-top: 1px solid var(--cc-border);
+  background:
+    radial-gradient(120% 70% at 90% 0%, var(--cc-aura-1) 0%, transparent 55%),
+    radial-gradient(100% 80% at 10% 100%, var(--cc-aura-2) 0%, transparent 60%),
+    var(--cc-surface-2);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  border-top: 1px solid var(--cc-stroke-2);
+  box-shadow: var(--cc-shadow-card);
   font-family: var(--cc-font-family);
   color: var(--cc-text);
   transform: translateY(100%);
@@ -155,14 +207,20 @@
 }
 
 .cc-modal-inner {
-  background-color: var(--cc-bg);
+  background:
+    radial-gradient(120% 70% at 90% 0%, var(--cc-aura-1) 0%, transparent 55%),
+    radial-gradient(100% 80% at 10% 100%, var(--cc-aura-2) 0%, transparent 60%),
+    var(--cc-surface-2);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  border: 1px solid var(--cc-stroke-2);
   border-radius: var(--cc-radius);
   width: 100%;
   max-width: 32rem;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--cc-shadow-card);
   box-sizing: border-box;
 }
 
@@ -250,13 +308,22 @@
 }
 
 .cc-badge {
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
   font-weight: 500;
-  color: var(--cc-text-muted);
-  border: 1px solid var(--cc-border);
-  border-radius: var(--cc-radius-pill);
-  padding: 0.125rem 0.5rem;
-  line-height: 1.5;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cc-text-mute);
+  background-color: rgba(var(--cc-tint-rgb), 0.06);
+  border-radius: var(--cc-radius-xs);
+  padding: 0.25rem 0.5rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+}
+
+.cc-badge--required {
+  color: var(--cc-primary);
+  background-color: rgba(37, 99, 235, 0.12);
 }
 
 .cc-category-description {
@@ -266,56 +333,57 @@
   color: var(--cc-text-muted);
 }
 
-/* ── Toggle Switch ──────────────────────────────────────── */
+/* ── Switch ─────────────────────────────────────────────
+ * Custom [role="switch"] control, 44×24 track with a 16×16 thumb and a 4px
+ * inset on both sides. State is driven by `aria-checked`; keyboard wiring
+ * (Space/Enter) and click toggling live in `client.ts`.
+ */
 
-.cc-toggle {
+.cc-switch {
   position: relative;
-  display: inline-block;
   width: 2.75rem;
   height: 1.5rem;
   flex-shrink: 0;
-}
-
-.cc-toggle input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-  position: absolute;
-}
-
-.cc-toggle-slider {
-  position: absolute;
-  inset: 0;
-  background-color: var(--cc-border);
   border-radius: var(--cc-radius-pill);
+  background-color: var(--cc-border);
+  box-shadow: inset 0 0 0 1px var(--cc-stroke-2);
   cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.cc-toggle-slider::before {
-  content: '';
-  position: absolute;
-  height: 1.125rem;
-  width: 1.125rem;
-  left: 0.1875rem;
-  bottom: 0.1875rem;
-  background-color: white;
-  border-radius: 50%;
-  transition: transform 0.2s ease;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
   box-sizing: border-box;
 }
 
-.cc-toggle input:checked + .cc-toggle-slider {
+.cc-switch::after {
+  content: '';
+  position: absolute;
+  top: 0.25rem;
+  left: 0.25rem;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background-color: #ffffff;
+  box-shadow: 0 1px 2px #0000004d, 0 2px 4px #00000033;
+  transition: transform 0.2s cubic-bezier(0.5, 0.1, 0.3, 1.4);
+  will-change: transform;
+}
+
+.cc-switch[aria-checked='true'] {
   background-color: var(--cc-primary);
+  box-shadow: inset 0 0 0 1px var(--cc-primary);
 }
 
-.cc-toggle input:checked + .cc-toggle-slider::before {
+.cc-switch[aria-checked='true']::after {
   transform: translateX(1.25rem);
+  background-color: var(--cc-accent-ink);
 }
 
-.cc-toggle input:disabled + .cc-toggle-slider {
-  opacity: 0.6;
+.cc-switch[data-locked='true'] {
+  opacity: 0.7;
   cursor: not-allowed;
+}
+
+.cc-switch:focus-visible {
+  outline: 2px solid var(--cc-primary);
+  outline-offset: 4px;
 }
 
 /* ── Buttons ────────────────────────────────────────────── */
@@ -394,10 +462,26 @@
 
 .cc-btn:focus-visible,
 .cc-modal-close:focus-visible,
-.cc-policy-link:focus-visible,
-.cc-toggle input:focus-visible + .cc-toggle-slider {
+.cc-policy-link:focus-visible {
   outline: 2px solid var(--cc-primary);
   outline-offset: 2px;
+}
+
+/* ── Reduced motion ─────────────────────────────────────
+ * Strips the surface fade/slide and the switch thumb animation so users
+ * with `prefers-reduced-motion: reduce` don't see the added motion.
+ */
+
+@media (prefers-reduced-motion: reduce) {
+  .cc-banner,
+  .cc-overlay,
+  .cc-modal,
+  .cc-modal-close,
+  .cc-switch,
+  .cc-switch::after {
+    transition: none !important;
+    animation: none !important;
+  }
 }
 
 /* ── Mobile (≤ 480px) ───────────────────────────────────── */

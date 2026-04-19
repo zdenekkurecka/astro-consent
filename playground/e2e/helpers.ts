@@ -23,8 +23,14 @@ export const sel = {
   manage: () => `[data-cc="manage"]`,
   close: () => `[data-cc="close-modal"]`,
   policyLink: () => `[data-cc="policy-link"]`,
-  switch: (category: string) => `[data-cc-category="${category}"]`,
-  toggleLabel: (category: string) => `label.cc-toggle:has([data-cc-category="${category}"])`,
+  // Scoped to `[role="switch"]` so the selector doesn't collide with
+  // `<script data-cc-category>` placeholders used by declarative blocking.
+  switch: (category: string) => `[role="switch"][data-cc-category="${category}"]`,
+  // The category switch is now a `[role="switch"]` div (#77) with no outer
+  // `<label>` wrapper — clicking the switch itself toggles aria-checked.
+  // Kept under the `toggleLabel` name so existing specs don't churn; may be
+  // renamed in a follow-up.
+  toggleLabel: (category: string) => `[role="switch"][data-cc-category="${category}"]`,
 };
 
 export async function clearConsent(page: Page) {
