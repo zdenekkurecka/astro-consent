@@ -8,6 +8,7 @@
   --cc-bg: #ffffff;
   --cc-surface: #f8fafc;
   --cc-surface-2: #ffffffe6;
+  --cc-surface-3: #f5f5f4f2;
   --cc-tint-rgb: 0, 0, 0;
   --cc-text: #0f172a;
   --cc-text-muted: #64748b;
@@ -39,16 +40,21 @@
   :where(:root) {
     --cc-primary: #3b82f6;
     --cc-primary-hover: #60a5fa;
-    --cc-bg: #1e293b;
-    --cc-surface: #334155;
-    --cc-surface-2: #1e293be6;
+    /* Warm near-black neutrals (stone palette) matching the v0.4 prototype;
+     * blue stays as the accent hue only, so the card no longer reads slate. */
+    --cc-bg: #1c1917;
+    --cc-surface: #292524;
+    --cc-surface-2: #2a2825d9;
+    --cc-surface-3: #1c1a18e6;
     --cc-tint-rgb: 255, 255, 255;
-    --cc-text: #f1f5f9;
-    --cc-text-muted: #94a3b8;
-    --cc-text-dim: #cbd5e1;
-    --cc-text-mute: #94a3b8;
-    --cc-border: #475569;
-    --cc-stroke-2: #64748b;
+    --cc-text: #fafaf9;
+    --cc-text-muted: #a8a29e;
+    --cc-text-dim: #d6d3d1;
+    --cc-text-mute: #78716c;
+    --cc-border: #44403c;
+    /* Translucent white hairline for elevated surfaces — gives the "glowing
+     * edge" the prototype relies on for dark-glass cards. */
+    --cc-stroke-2: #ffffff24;
     --cc-accent-ink: #ffffff;
     --cc-aura-1: #3b82f629;
     --cc-aura-2: #60a5fa14;
@@ -72,6 +78,7 @@
   --cc-bg: #ffffff;
   --cc-surface: #f8fafc;
   --cc-surface-2: #ffffffe6;
+  --cc-surface-3: #f5f5f4f2;
   --cc-tint-rgb: 0, 0, 0;
   --cc-text: #0f172a;
   --cc-text-muted: #64748b;
@@ -91,16 +98,17 @@
 :where([data-cc-theme='dark']) {
   --cc-primary: #3b82f6;
   --cc-primary-hover: #60a5fa;
-  --cc-bg: #1e293b;
-  --cc-surface: #334155;
-  --cc-surface-2: #1e293be6;
+  --cc-bg: #1c1917;
+  --cc-surface: #292524;
+  --cc-surface-2: #2a2825d9;
+  --cc-surface-3: #1c1a18e6;
   --cc-tint-rgb: 255, 255, 255;
-  --cc-text: #f1f5f9;
-  --cc-text-muted: #94a3b8;
-  --cc-text-dim: #cbd5e1;
-  --cc-text-mute: #94a3b8;
-  --cc-border: #475569;
-  --cc-stroke-2: #64748b;
+  --cc-text: #fafaf9;
+  --cc-text-muted: #a8a29e;
+  --cc-text-dim: #d6d3d1;
+  --cc-text-mute: #78716c;
+  --cc-border: #44403c;
+  --cc-stroke-2: #ffffff24;
   --cc-accent-ink: #ffffff;
   --cc-aura-1: #3b82f629;
   --cc-aura-2: #60a5fa14;
@@ -121,7 +129,7 @@
   background:
     radial-gradient(120% 70% at 90% 0%, var(--cc-aura-1) 0%, transparent 55%),
     radial-gradient(100% 80% at 10% 100%, var(--cc-aura-2) 0%, transparent 60%),
-    var(--cc-surface-2);
+    linear-gradient(180deg, var(--cc-surface-2), var(--cc-surface-3));
   backdrop-filter: blur(24px) saturate(1.2);
   -webkit-backdrop-filter: blur(24px) saturate(1.2);
   border-top: 1px solid var(--cc-stroke-2);
@@ -210,7 +218,7 @@
   background:
     radial-gradient(120% 70% at 90% 0%, var(--cc-aura-1) 0%, transparent 55%),
     radial-gradient(100% 80% at 10% 100%, var(--cc-aura-2) 0%, transparent 60%),
-    var(--cc-surface-2);
+    linear-gradient(180deg, var(--cc-surface-2), var(--cc-surface-3));
   backdrop-filter: blur(24px) saturate(1.2);
   -webkit-backdrop-filter: blur(24px) saturate(1.2);
   border: 1px solid var(--cc-stroke-2);

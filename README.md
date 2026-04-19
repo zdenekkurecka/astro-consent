@@ -683,7 +683,7 @@ The tokens fall into three layers:
 | `--cc-accent-ink` | Text colour painted on top of an accent fill (e.g. the primary button label). |
 | `--cc-bg` | Solid page-level background for surfaces that aren't floating. |
 | `--cc-surface` | Raised tint used inside cards for subtle separation. |
-| `--cc-surface-2` | Base colour of floating surfaces (banner + modal card). Uses 8-digit hex so the auras and backdrop-filter read through it. |
+| `--cc-surface-2` / `--cc-surface-3` | Top and bottom stops of the floating-surface gradient (banner + modal card). Both use 8-digit hex so the auras and backdrop-filter read through them. |
 | `--cc-text` / `--cc-text-muted` | Body copy and secondary copy. |
 | `--cc-text-dim` / `--cc-text-mute` | Tertiary steps for metadata and captions. |
 | `--cc-border` | Default divider / toggle-track stroke. |
