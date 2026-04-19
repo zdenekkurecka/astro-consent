@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { clearConsent, sel } from './helpers';
+import { clearConsent } from './helpers';
 
 test.describe('Recipe snippets (GA4 / GTM / Meta Pixel)', () => {
   test.beforeEach(async ({ page }) => {
@@ -9,7 +9,7 @@ test.describe('Recipe snippets (GA4 / GTM / Meta Pixel)', () => {
   });
 
   test('every recipe stays inert before consent', async ({ page }) => {
-    await expect(page.locator(sel.banner())).toHaveClass(/cc-visible/);
+    await expect(page.locator('#cc-banner')).toHaveClass(/cc-visible/);
 
     await expect(page.locator('#recipe-ga4-marker')).toHaveAttribute('data-loaded', 'false');
     await expect(page.locator('#recipe-ga4-inline-marker')).toHaveAttribute('data-loaded', 'false');
@@ -25,9 +25,9 @@ test.describe('Recipe snippets (GA4 / GTM / Meta Pixel)', () => {
   });
 
   test('analytics-only consent loads GA4 and GTM, leaves Meta Pixel blocked', async ({ page }) => {
-    await page.locator(sel.manage()).click();
-    await page.locator(sel.toggleLabel('analytics')).click();
-    await page.locator(sel.savePreferences()).click();
+    await page.locator('[data-cc=manage]').click();
+    await page.locator('label.cc-toggle:has([data-cc-category=analytics])').click();
+    await page.locator('[data-cc=save-preferences]').click();
 
     await expect(page.locator('#recipe-ga4-marker')).toHaveAttribute('data-loaded', 'true');
     await expect(page.locator('#recipe-ga4-inline-marker')).toHaveAttribute('data-loaded', 'true');
@@ -39,7 +39,7 @@ test.describe('Recipe snippets (GA4 / GTM / Meta Pixel)', () => {
   });
 
   test('accept-all fires every recipe', async ({ page }) => {
-    await page.locator(sel.acceptAll()).click();
+    await page.locator('[data-cc=accept-all]').click();
 
     await expect(page.locator('#recipe-ga4-marker')).toHaveAttribute('data-loaded', 'true');
     await expect(page.locator('#recipe-ga4-inline-marker')).toHaveAttribute('data-loaded', 'true');
@@ -60,7 +60,7 @@ test.describe('Recipe snippets (GA4 / GTM / Meta Pixel)', () => {
   });
 
   test('reject-all keeps everything blocked', async ({ page }) => {
-    await page.locator(sel.rejectAll()).click();
+    await page.locator('[data-cc=reject-all]').click();
 
     await expect(page.locator('#recipe-ga4-marker')).toHaveAttribute('data-loaded', 'false');
     await expect(page.locator('#recipe-gtm-marker')).toHaveAttribute('data-loaded', 'false');

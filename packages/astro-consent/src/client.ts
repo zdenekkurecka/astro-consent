@@ -28,11 +28,6 @@ import {
   isModalVisible,
   getModalSelections,
   updateModalToggles,
-  getBannerSelections,
-  updateBannerToggles,
-  isCategoriesOnBanner,
-  isBannerExpanded,
-  setBannerExpanded,
   handleModalTabTrap,
 } from './ui.js';
 import { activateBlockedResources, initScriptBlocker } from './scripts.js';
@@ -152,32 +147,6 @@ export function initConsentManager(config: SerializableConsentConfig): void {
   if (!listenerAttached) {
     listenerAttached = true;
 
-    // Custom [role="switch"] toggles — no native input, so we handle click +
-    // Space/Enter explicitly. Scoped to either container so script-blocking
-    // markup that reuses `data-cc-category` on <script>/<iframe> can't match
-    // (the selector requires `[role="switch"]`, but we keep the explicit
-    // container scoping as a belt-and-braces guard).
-    const TOGGLE_SELECTOR =
-      '#cc-modal [role="switch"][data-cc-category], #cc-banner [role="switch"][data-cc-category]';
-    const toggleSwitch = (sw: HTMLElement): void => {
-      if (sw.getAttribute('data-locked') === 'true') return;
-      const next = sw.getAttribute('aria-checked') !== 'true';
-      sw.setAttribute('aria-checked', next ? 'true' : 'false');
-    };
-
-    document.addEventListener('click', (e) => {
-      const sw = (e.target as HTMLElement).closest<HTMLElement>(TOGGLE_SELECTOR);
-      if (sw) toggleSwitch(sw);
-    });
-
-    document.addEventListener('keydown', (e) => {
-      if (e.key !== ' ' && e.key !== 'Enter') return;
-      const sw = (e.target as HTMLElement).closest<HTMLElement>(TOGGLE_SELECTOR);
-      if (!sw) return;
-      e.preventDefault();
-      toggleSwitch(sw);
-    });
-
     document.addEventListener('click', (e) => {
       const target = (e.target as HTMLElement).closest<HTMLElement>('[data-cc]');
       if (!target) return;
@@ -187,21 +156,6 @@ export function initConsentManager(config: SerializableConsentConfig): void {
       switch (action) {
         case 'accept-all':
         case 'modal-accept-all': {
-          // In single-layer mode, the primary button morphs to "Save
-          // preferences" once the banner is expanded — so an "accept-all"
-          // click while expanded is really a save-preferences with the
-          // current banner switch state.
-          if (action === 'accept-all' && isCategoriesOnBanner() && isBannerExpanded()) {
-            const selections = getBannerSelections();
-            const isUpdate = !needsConsent(config.version, config.maxAgeDays);
-            log(`save-preferences (banner) →`, selections, isUpdate ? '(update)' : '(initial)');
-            const state = savePreferences(config, selections);
-            persist(state);
-            hideBanner();
-            consentFiredThisSession = true;
-            emit(isUpdate ? CHANGE_EVENT : CONSENT_EVENT, state);
-            break;
-          }
           log(`${action} →`, 'all categories: true');
           const isUpdate = !needsConsent(config.version, config.maxAgeDays);
           const state = acceptAll(config);
@@ -227,27 +181,19 @@ export function initConsentManager(config: SerializableConsentConfig): void {
         }
 
         case 'manage': {
-          // Sync toggles with current state or defaults regardless of
-          // whether we open the modal or just expand the banner — the same
-          // markup/data-cc-category attributes are read by both paths.
-          const current = readConsent();
-          const seed: Record<string, boolean> = {};
-          if (current) {
-            Object.assign(seed, current.categories);
-          } else {
-            for (const [key, cat] of Object.entries(config.categories)) {
-              seed[key] = cat.default;
-            }
-          }
-
-          if (isCategoriesOnBanner()) {
-            updateBannerToggles(seed);
-            setBannerExpanded(!isBannerExpanded());
-            break;
-          }
-
           hideBanner();
-          updateModalToggles(seed);
+          // Sync toggles with current state or defaults.
+          const current = readConsent();
+          if (current) {
+            updateModalToggles(current.categories);
+          } else {
+            // After reset: show defaults from config.
+            const defaults: Record<string, boolean> = {};
+            for (const [key, cat] of Object.entries(config.categories)) {
+              defaults[key] = cat.default;
+            }
+            updateModalToggles(defaults);
+          }
           showModal();
           break;
         }
@@ -270,16 +216,6 @@ export function initConsentManager(config: SerializableConsentConfig): void {
           if (needsConsent(config.version, config.maxAgeDays)) {
             showBanner();
           }
-          break;
-        }
-
-        case 'dismiss': {
-          // Single-layer banner's `×` button — hide without recording
-          // consent. The banner re-appears on the next page load if no
-          // valid consent record is stored, which is the conservative
-          // default for compliance (no implicit choice).
-          log('dismiss');
-          hideBanner();
           break;
         }
 
@@ -380,28 +316,17 @@ export function initConsentManager(config: SerializableConsentConfig): void {
     },
     showPreferences: () => {
       injectUI(config, text);
-      const current = readConsent();
-      const seed: Record<string, boolean> = {};
-      if (current) {
-        Object.assign(seed, current.categories);
-      } else {
-        for (const [key, cat] of Object.entries(config.categories)) {
-          seed[key] = cat.default;
-        }
-      }
-
-      if (isCategoriesOnBanner()) {
-        // Single-layer mode: there is no modal to open — show the banner
-        // (in case it was hidden) and flip it into expanded state so the
-        // toggles are visible.
-        updateBannerToggles(seed);
-        showBanner();
-        setBannerExpanded(true);
-        return;
-      }
-
       hideBanner();
-      updateModalToggles(seed);
+      const current = readConsent();
+      if (current) {
+        updateModalToggles(current.categories);
+      } else {
+        const defaults: Record<string, boolean> = {};
+        for (const [key, cat] of Object.entries(config.categories)) {
+          defaults[key] = cat.default;
+        }
+        updateModalToggles(defaults);
+      }
       showModal();
     },
   };

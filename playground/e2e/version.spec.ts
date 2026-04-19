@@ -1,5 +1,5 @@
 import { test } from '@playwright/test';
-import { clearConsent, expectBannerVisible, sel } from './helpers';
+import { clearConsent, expectBannerVisible } from './helpers';
 
 test.describe('Versioned consent', () => {
   test('banner re-appears when stored version < config version', async ({ page }) => {
@@ -7,7 +7,7 @@ test.describe('Versioned consent', () => {
     await clearConsent(page);
     await page.reload();
 
-    await page.locator(sel.acceptAll()).click();
+    await page.locator('[data-cc=accept-all]').click();
     await expectBannerVisible(page, false);
 
     await page.evaluate(() => {

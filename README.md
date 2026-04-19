@@ -28,9 +28,7 @@
   - [Recipes (GA4, GTM, Meta Pixel)](#recipes-ga4-gtm-meta-pixel)
   - [Re-prompt users after changing categories](#re-prompt-users-after-changing-categories)
   - [Customise banner & modal text (and localize it)](#customise-banner--modal-text-and-localize-it)
-  - [Choose a banner layout](#choose-a-banner-layout)
   - [Theme the UI](#theme-the-ui)
-  - [Single-layer consent (toggles on the banner)](#single-layer-consent-toggles-on-the-banner)
   - [Use with a strict Content Security Policy](#use-with-a-strict-content-security-policy)
   - [Debug mode](#debug-mode)
 - [Runtime API](#runtime-api)
@@ -65,8 +63,6 @@ they force you to serialize your tracker callbacks into a JSON config.
 ## Features
 
 - **Banner + preferences modal** out of the box
-- **Single-layer consent** — toggles inline on the banner with one config
-  flag, eliminating the modal click for sites with few categories
 - **Category-based consent** (`analytics`, `marketing`, … — whatever you
   declare), plus an always-on implicit `essential` category
 - **Versioned consent** — bump a number to re-prompt every user
@@ -215,41 +211,6 @@ interface ConsentConfig {
    * @default false
    */
   debug?: boolean;
-
-  /** Visual / placement configuration for the banner and modal. */
-  ui?: {
-    /**
-     * Forces the consent UI into `"light"` / `"dark"` by setting
-     * `data-cc-theme` on `:root`. `"auto"` (default) follows
-     * `prefers-color-scheme`.
-     */
-    colorMode?: 'auto' | 'light' | 'dark';
-    /**
-     * Banner layout and placement. See
-     * [Choose a banner layout](#choose-a-banner-layout) for the visuals and
-     * valid position-per-layout combinations.
-     */
-    banner?: {
-      /** @default "bar" */
-      layout?: 'bar' | 'box' | 'cloud' | 'popup';
-      /** Defaults vary per layout — `bottom` for `bar`/`cloud`, `bottom-right` for `box`, `center` for `popup`. */
-      position?:
-        | 'top'
-        | 'bottom'
-        | 'top-left'
-        | 'top-right'
-        | 'bottom-left'
-        | 'bottom-right'
-        | 'center';
-      /**
-       * Dim the page behind the banner. Passthrough for `cloud`; forced on
-       * for `popup`; forced off for `bar` and `box`.
-       *
-       * @default false
-       */
-      scrim?: boolean;
-    };
-  };
 
   /**
    * Single-language text overrides for the banner and modal. Any field
@@ -703,252 +664,16 @@ import '@zdenekkurecka/astro-consent/styles';
 ```
 
 The styles use CSS custom properties, so you can theme them from your own
-stylesheet without forking anything. Three inputs drive the entire palette —
-rebranding is typically a one-liner:
+stylesheet without forking anything:
 
 ```css
 :root {
-  --cc-primary: #16a34a; /* green accent; fill, hover, focus ring, auras, and required-badge tint all follow */
+  --cc-primary: #7c3aed;
+  --cc-primary-hover: #6d28d9;
+  --cc-radius: 0.75rem;
+  --cc-font-family: 'Inter', sans-serif;
 }
 ```
-
-#### Base inputs
-
-Override these to rebrand. Surfaces, strokes, and text steps are derived from
-them at the CSS layer via `color-mix()`, so you rarely need to touch anything
-else.
-
-| Token | Role |
-| --- | --- |
-| `--cc-primary` | Accent — primary-button fill, focus ring, aura hue, required-badge tint. |
-| `--cc-tone` | Neutral base — paper in light mode, ink in dark mode. Drives `--cc-bg`, surface stops, strokes, and text steps. |
-| `--cc-text` | Body foreground. Drives every muted / dim / border step via `color-mix()`. |
-
-```css
-/* Dark brand, warm tone */
-:root {
-  --cc-primary: #f97316;
-  --cc-tone:    #0a0a0a;
-  --cc-text:    #fafafa;
-}
-```
-
-#### Advanced overrides
-
-Every derived token remains declared, so you can still override any one of
-them individually if the default derivation doesn't land where you want.
-
-| Token | Default | Role |
-| --- | --- | --- |
-| `--cc-primary-hover` | `color-mix(… var(--cc-primary) 85%, var(--cc-text))` | Hover state; naturally darkens in light / lightens in dark by mixing toward `--cc-text`. |
-| `--cc-accent-ink` | `#ffffff` | Text on top of an accent fill (e.g. the primary button label). |
-| `--cc-bg` | `var(--cc-tone)` | Solid page-level background for surfaces that aren't floating. |
-| `--cc-surface` | `color-mix(… var(--cc-tone) 94%, var(--cc-text))` | Raised tint inside cards (secondary-button fill). |
-| `--cc-surface-2` | `color-mix(… var(--cc-surface) 90%, transparent)` | Top stop of the floating-surface gradient. |
-| `--cc-surface-3` | `color-mix(… var(--cc-tone) 95%, transparent)` | Bottom stop of the floating-surface gradient. |
-| `--cc-text-muted` | `color-mix(… var(--cc-text) 58%, var(--cc-tone))` | Secondary body copy. |
-| `--cc-text-dim` | `color-mix(… var(--cc-text) 80%, var(--cc-tone))` | Tertiary step; closer to `--cc-text`. |
-| `--cc-text-mute` | `color-mix(… var(--cc-text) 42%, var(--cc-tone))` | Tertiary step; furthest from `--cc-text`. |
-| `--cc-border` | `color-mix(… var(--cc-text) 12%, var(--cc-tone))` | Default divider / toggle-track stroke. |
-| `--cc-stroke-2` | `color-mix(… var(--cc-text) 25%, var(--cc-tone))` | Stronger border around focused / elevated surfaces. |
-| `--cc-aura-1` | `color-mix(… var(--cc-primary) 16%, transparent)` | Top-right radial tint on the card. |
-| `--cc-aura-2` | `color-mix(… var(--cc-primary) 6%, transparent)` | Bottom-left radial tint on the card. |
-| `--cc-shadow-card` | _explicit per-theme_ | Composite card shadow with an inset highlight line. Not derivable from a single input — override as a full `box-shadow` value. |
-| `--cc-radius` / `--cc-radius-sm` / `--cc-radius-xs` / `--cc-radius-pill` | _fixed_ | Corner radius scale. |
-| `--cc-font-family` | `inherit` | Font stack; defaults to `inherit` so the banner picks up your site font. |
-
-#### Browser support
-
-`color-mix()` is Baseline-widely-available (Chrome 111 / Safari 16.2 /
-Firefox 113, shipping since mid-2023). On older browsers the `color-mix()`
-expression is treated as an invalid value, so the derived tokens fall through
-to their initial — the card still paints, it just won't re-derive when only
-`--cc-primary` or `--cc-tone` is overridden. If you need to support legacy
-browsers, either override each token explicitly (using the defaults above as
-a starting point), or inline `color-mix()` at build time with PostCSS.
-
-### Choose a banner layout
-
-Four banner layouts ship out of the box. The default is `bar` + `bottom` — a
-full-width strip along the viewport edge, exactly what earlier versions of the
-integration rendered. Swap it via `ui.banner`:
-
-```ts
-cookieConsent({
-  version: 1,
-  categories: { /* ... */ },
-  ui: {
-    banner: {
-      layout: 'box',          // 'bar' | 'box' | 'cloud' | 'popup'
-      position: 'bottom-right',
-      scrim: false,           // cloud-only passthrough; popup always on, bar/box always off
-    },
-  },
-});
-```
-
-#### `bar` — full-width strip (default)
-
-```
-┌───────────────────────────────────┐
-│                                   │
-│          page content             │
-│                                   │
-├───────────────────────────────────┤
-│ 🍪  We use cookies…   [✓] [✗] [⚙] │
-└───────────────────────────────────┘
-```
-
-Edge-to-edge strip anchored to `bottom` (default) or `top`. Minimal visual
-disruption — the right default for content-heavy sites that just need a clear
-opt-in surface.
-
-#### `box` — corner card
-
-```
-┌───────────────────────────────────┐
-│                                   │
-│                                   │
-│          page content             │
-│                                   │
-│                     ┌────────────┐│
-│                     │ 🍪 We use  ││
-│                     │ cookies…   ││
-│                     │ [✓] [✗]    ││
-│                     │ [⚙]        ││
-│                     └────────────┘│
-└───────────────────────────────────┘
-```
-
-Compact card (≈ 420px) pinned to any corner. Buttons stack inside so the card
-stays narrow. Good for product UIs that want the consent out of the way.
-
-#### `cloud` — floating padded strip
-
-```
-┌───────────────────────────────────┐
-│                                   │
-│          page content             │
-│                                   │
-│  ╭─────────────────────────────╮  │
-│  │ 🍪 We use cookies…  [✓][✗]… │  │
-│  ╰─────────────────────────────╯  │
-└───────────────────────────────────┘
-```
-
-Rounded card with side margins, floating above the page. Optionally pair with
-`scrim: true` to dim the background without turning it into a modal.
-
-#### `popup` — centered modal
-
-```
-┌───────────────────────────────────┐
-│░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
-│░░░░░░░  ┌─────────────────┐  ░░░░ │
-│░░░░░░░  │ 🍪 We use       │  ░░░░ │
-│░░░░░░░  │ cookies…        │  ░░░░ │
-│░░░░░░░  │   [✓]   [✗]     │  ░░░░ │
-│░░░░░░░  │     [⚙]         │  ░░░░ │
-│░░░░░░░  └─────────────────┘  ░░░░ │
-│░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
-└───────────────────────────────────┘
-```
-
-Centered card with an always-on scrim. Demands an explicit choice — use when
-passive consent isn't legally sufficient. The scrim is click-inert: there's
-no dismiss-by-clicking-outside, because that would silently record a choice.
-
-#### Position validity per layout
-
-Invalid combinations fall back to the layout's default and emit a
-`console.warn` in dev so misconfiguration is loud.
-
-| Layout  | Valid positions                                            | Default          |
-| ------- | ---------------------------------------------------------- | ---------------- |
-| `bar`   | `top`, `bottom`                                            | `bottom`         |
-| `box`   | `top-left`, `top-right`, `bottom-left`, `bottom-right`     | `bottom-right`   |
-| `cloud` | `top`, `bottom`                                            | `bottom`         |
-| `popup` | `center`                                                   | `center`         |
-
-#### Layout-related CSS tokens
-
-Every layout honours the visual tokens above; a handful of extra knobs control
-width and viewport gutters. Override them on `:root` to fine-tune the frame
-without re-writing per-variant selectors.
-
-| Token | Default | Role |
-| --- | --- | --- |
-| `--cc-banner-max-width` | `72rem` | Content cap inside `bar` / `cloud`. Doesn't affect `box` / `popup`. |
-| `--cc-box-width` | `26rem` | Target width of the `box` variant. Caps against viewport width minus `--cc-banner-offset` gutters. |
-| `--cc-popup-width` | `30rem` | Target width of the `popup` variant. Caps the same way as `--cc-box-width`. |
-| `--cc-banner-offset` | `1rem` | Gap between the banner and viewport edges for `box` / `cloud` / `popup`. Also shrinks the responsive cap on width. |
-
-#### Styling hooks
-
-The banner renders a single element whose layout is selected via data
-attributes: `data-cc-layout` (`bar` / `box` / `cloud` / `popup`),
-`data-cc-position`, and `data-cc-scrim`. Target them directly if you want to
-override per-variant styling without forking the integration.
-
-```css
-/* Tighten the box variant on marketing pages only */
-.marketing .cc-banner[data-cc-layout='box'] {
-  --cc-box-width: 22rem;
-}
-```
-
-### Single-layer consent (toggles on the banner)
-
-The default flow is two layers: banner → preferences modal. For sites with
-only 2–3 categories, the modal can feel excessive. Set
-`ui.banner.categoriesOnBanner: true` to render the toggles inline on the
-banner and skip the modal entirely:
-
-```ts
-cookieConsent({
-  version: 1,
-  categories: {
-    analytics: { label: 'Analytics', description: '…', default: false },
-    marketing: { label: 'Marketing', description: '…', default: false },
-  },
-  ui: {
-    banner: {
-      layout: 'cloud',
-      categoriesOnBanner: true,
-    },
-  },
-});
-```
-
-The banner starts collapsed. Clicking **Customize** expands it in place and
-morphs the action labels:
-
-| State     | Ghost button       | Primary button     |
-| --------- | ------------------ | ------------------ |
-| Collapsed | `text.manage`      | `text.acceptAll`   |
-| Expanded  | `text.hidePreferences` | `text.savePreferences` |
-
-Once expanded, the "Reject optional" button fades and collapses to zero
-width — it's redundant when the user has direct switch control. A small
-`×` close button (labelled via `text.dismissAriaLabel`) lets the user
-dismiss the banner without recording consent; it will reappear on the
-next page load.
-
-`window.astroConsent.showPreferences()` continues to work — in single-layer
-mode it flips the banner into expanded mode instead of opening the modal.
-
-**Layout fit.** Single-layer mode works best in layouts with room for the
-expanded card:
-
-| Layout  | Fit                                                    |
-| ------- | ------------------------------------------------------ |
-| `cloud` | ✅ ideal — centered padded strip with room to expand   |
-| `popup` | ✅ centered overlay; scrolls if categories overflow    |
-| `bar`   | works, but vertical space is tight                     |
-| `box`   | not recommended — typically too narrow                 |
-
-**Behavior when `false` (default).** Two-layer flow preserved. No
-breaking change for existing installations.
 
 ### Use with a strict Content Security Policy
 
@@ -1134,19 +859,7 @@ if you don't declare it, and the narrow type kicks in the moment you do.
 - Banner and modal both toggle `aria-hidden` in lockstep with their
   visibility, so screen readers don't announce them while they are
   visually hidden.
-- Category toggles are `[role="switch"]` with `aria-checked` (and
-  `aria-disabled="true"` on the locked essential category). `Space` and
-  `Enter` flip them; focus rings follow `:focus-visible`.
-- Respects `prefers-reduced-motion: reduce` — the banner/modal fade, the
-  switch thumb transition, the overlay fade, and the single-layer
-  expand/collapse + reject-button collapse are all dropped when the user
-  has opted into reduced motion.
 - All buttons have `type="button"` so they never submit ambient forms.
-- In single-layer mode (`ui.banner.categoriesOnBanner: true`), the banner
-  retains `role="dialog"` only when paired with the `popup` layout (the
-  card sits atop a scrim); other layouts use `role="region"` with
-  `aria-label="Cookie consent"`. Focus moves to the first interactive
-  switch when the banner expands.
 
 ## Repository layout
 
@@ -1183,35 +896,6 @@ pnpm build:all
 The playground in `playground/` is a small Astro app wired up to the local
 package. Use it to iterate on the integration, try out new config options,
 and verify View Transitions behavior.
-
-### Writing tests
-
-End-to-end specs live in `playground/e2e/` and run against the built
-playground via `pnpm exec playwright test`.
-
-- **Selectors live in one place.** Every selector goes through the `sel.*`
-  helpers in `playground/e2e/helpers.ts`. Specs should not inline `#cc-…`,
-  `[data-cc=…]`, or `[data-testid=…]` strings — a rename of one selector
-  should touch `helpers.ts` only.
-- **Use the `openBanner()` fixture** for new specs. It navigates to the
-  playground with any variant options you pass (layout, categoriesOnBanner,
-  showCounter, equalWeight), clears stored consent, waits for the banner,
-  and returns locators for the typical surfaces:
-
-  ```ts
-  const { banner, accept, manage, toggle } = await openBanner(page, {
-    layout: 'box',
-  });
-  ```
-
-- **Organize by behavior, not by surface.** Files in `playground/e2e/` are
-  named after what the test asserts (`visibility`, `actions`,
-  `categories`, `keyboard`, `a11y`, `variants`) rather than which DOM
-  element it pokes at. That way, merging the banner and modal into a
-  single surface doesn't force a wholesale rename.
-- For specs that exercise features not yet implemented (e.g. a layout
-  variant still on the roadmap), use `test.fixme('…(#<issue>)', …)` so the
-  expectation stays visible until the feature PR flips it on.
 
 ## Contributing
 

@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { clearConsent, expectBannerVisible, getConsentState, sel } from './helpers';
+import { clearConsent, expectBannerVisible, getConsentState } from './helpers';
 
 test.describe('View Transitions', () => {
   test('consent persists across SPA navigation', async ({ page }) => {
@@ -7,7 +7,7 @@ test.describe('View Transitions', () => {
     await clearConsent(page);
     await page.reload();
 
-    await page.locator(sel.acceptAll()).click();
+    await page.locator('[data-cc=accept-all]').click();
     await expectBannerVisible(page, false);
 
     await page.locator('nav a[href="/about"]').click();
@@ -25,7 +25,7 @@ test.describe('View Transitions', () => {
     await clearConsent(page);
     await page.reload();
 
-    await page.locator(sel.rejectAll()).click();
+    await page.locator('[data-cc=reject-all]').click();
     await expectBannerVisible(page, false);
 
     await page.locator('nav a[href="/about"]').click();

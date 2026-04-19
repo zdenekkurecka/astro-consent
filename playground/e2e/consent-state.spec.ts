@@ -4,7 +4,6 @@ import {
   expectBannerVisible,
   getConsentState,
   getConsentAPI,
-  sel,
 } from './helpers';
 
 test.describe('Consent state', () => {
@@ -15,7 +14,7 @@ test.describe('Consent state', () => {
   });
 
   test('accept all → all categories true', async ({ page }) => {
-    await page.locator(sel.acceptAll()).click();
+    await page.locator('[data-cc=accept-all]').click();
 
     const state = await getConsentState(page);
     expect(state).not.toBeNull();
@@ -29,7 +28,7 @@ test.describe('Consent state', () => {
   });
 
   test('reject all → non-essential categories false', async ({ page }) => {
-    await page.locator(sel.rejectAll()).click();
+    await page.locator('[data-cc=reject-all]').click();
 
     const state = await getConsentState(page);
     expect(state.categories.essential).toBe(true);
@@ -40,17 +39,17 @@ test.describe('Consent state', () => {
   });
 
   test('save preferences → respects individual toggles', async ({ page }) => {
-    await page.locator(sel.manage()).click();
+    await page.locator('[data-cc=manage]').click();
 
-    // Each category renders as a [role="switch"] div — clicking it flips
-    // aria-checked. Playwright's check()/uncheck() don't drive ARIA switches,
-    // so we click through the helper selector.
-    await page.locator(sel.toggleLabel('analytics')).click();
+    // The real inputs are visually hidden (width/height: 0) so Playwright's
+    // check()/uncheck() can't target them directly. Click the wrapping
+    // <label class="cc-toggle"> which toggles the input.
+    await page.locator('label.cc-toggle:has([data-cc-category=analytics])').click();
     // Marketing default is false, so nothing to uncheck — ensure it stays off
     // by reading the checkbox state without touching it.
-    await expect(page.locator(sel.switch('marketing'))).not.toBeChecked();
+    await expect(page.locator('[data-cc-category=marketing]')).not.toBeChecked();
 
-    await page.locator(sel.savePreferences()).click();
+    await page.locator('[data-cc=save-preferences]').click();
 
     const state = await getConsentState(page);
     expect(state.categories.essential).toBe(true);
@@ -59,14 +58,14 @@ test.describe('Consent state', () => {
   });
 
   test('essential toggle is always checked and disabled', async ({ page }) => {
-    await page.locator(sel.manage()).click();
-    const essential = page.locator(sel.switch('essential'));
+    await page.locator('[data-cc=manage]').click();
+    const essential = page.locator('[data-cc-category=essential]');
     await expect(essential).toBeChecked();
     await expect(essential).toBeDisabled();
   });
 
   test('runtime API matches localStorage', async ({ page }) => {
-    await page.locator(sel.acceptAll()).click();
+    await page.locator('[data-cc=accept-all]').click();
 
     const fromStorage = await getConsentState(page);
     const fromAPI = await getConsentAPI(page);

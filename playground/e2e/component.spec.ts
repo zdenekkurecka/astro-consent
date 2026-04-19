@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { clearConsent, sel } from './helpers';
+import { clearConsent } from './helpers';
 
 test.describe('ConsentScript component', () => {
   test.beforeEach(async ({ page }) => {
@@ -9,7 +9,7 @@ test.describe('ConsentScript component', () => {
   });
 
   test('renders inert placeholders before consent', async ({ page }) => {
-    await expect(page.locator(sel.banner())).toHaveClass(/cc-visible/);
+    await expect(page.locator('#cc-banner')).toHaveClass(/cc-visible/);
 
     expect(await page.evaluate(() => (window as any).__ccComponentInlineLoaded)).toBeUndefined();
     expect(await page.evaluate(() => (window as any).__ccComponentExternalLoaded)).toBeUndefined();
@@ -22,7 +22,7 @@ test.describe('ConsentScript component', () => {
   });
 
   test('accept-all activates every gated script', async ({ page }) => {
-    await page.locator(sel.acceptAll()).click();
+    await page.locator('[data-cc=accept-all]').click();
 
     await expect(page.locator('#c-inline-marker')).toHaveAttribute('data-loaded', 'true');
     await expect(page.locator('#c-ext-marker')).toHaveAttribute('data-loaded', 'true');
@@ -34,9 +34,9 @@ test.describe('ConsentScript component', () => {
   });
 
   test('denied category stays blocked', async ({ page }) => {
-    await page.locator(sel.manage()).click();
-    await page.locator(sel.toggleLabel('analytics')).click();
-    await page.locator(sel.savePreferences()).click();
+    await page.locator('[data-cc=manage]').click();
+    await page.locator('label.cc-toggle:has([data-cc-category=analytics])').click();
+    await page.locator('[data-cc=save-preferences]').click();
 
     await expect(page.locator('#c-inline-marker')).toHaveAttribute('data-loaded', 'true');
     await expect(page.locator('#c-marketing-marker')).toHaveAttribute('data-loaded', 'false');
@@ -47,7 +47,7 @@ test.describe('ConsentScript component', () => {
   test('passes through script attributes such as async', async ({ page }) => {
     // The marketing ConsentScript is declared with `async`. After activation
     // the forwarded attribute should still be present on the live <script>.
-    await page.locator(sel.acceptAll()).click();
+    await page.locator('[data-cc=accept-all]').click();
 
     await expect(page.locator('#c-marketing-marker')).toHaveAttribute('data-loaded', 'true');
 
