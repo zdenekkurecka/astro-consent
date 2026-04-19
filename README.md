@@ -897,6 +897,35 @@ The playground in `playground/` is a small Astro app wired up to the local
 package. Use it to iterate on the integration, try out new config options,
 and verify View Transitions behavior.
 
+### Writing tests
+
+End-to-end specs live in `playground/e2e/` and run against the built
+playground via `pnpm exec playwright test`.
+
+- **Selectors live in one place.** Every selector goes through the `sel.*`
+  helpers in `playground/e2e/helpers.ts`. Specs should not inline `#cc-…`,
+  `[data-cc=…]`, or `[data-testid=…]` strings — a rename of one selector
+  should touch `helpers.ts` only.
+- **Use the `openBanner()` fixture** for new specs. It navigates to the
+  playground with any variant options you pass (layout, categoriesOnBanner,
+  showCounter, equalWeight), clears stored consent, waits for the banner,
+  and returns locators for the typical surfaces:
+
+  ```ts
+  const { banner, accept, manage, toggle } = await openBanner(page, {
+    layout: 'box',
+  });
+  ```
+
+- **Organize by behavior, not by surface.** Files in `playground/e2e/` are
+  named after what the test asserts (`visibility`, `actions`,
+  `categories`, `keyboard`, `a11y`, `variants`) rather than which DOM
+  element it pokes at. That way, merging the banner and modal into a
+  single surface doesn't force a wholesale rename.
+- For specs that exercise features not yet implemented (e.g. a layout
+  variant still on the roadmap), use `test.fixme('…(#<issue>)', …)` so the
+  expectation stays visible until the feature PR flips it on.
+
 ## Contributing
 
 Issues and pull requests are welcome. If you're reporting a bug, a minimal

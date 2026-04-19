@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { clearConsent, expectBannerVisible, getConsentAPI } from './helpers';
+import { clearConsent, expectBannerVisible, getConsentAPI, sel } from './helpers';
 
 test.describe('Runtime API', () => {
   test.beforeEach(async ({ page }) => {
@@ -28,7 +28,7 @@ test.describe('Runtime API', () => {
   });
 
   test('reset() clears consent and re-shows banner', async ({ page }) => {
-    await page.locator('[data-cc=accept-all]').click();
+    await page.locator(sel.acceptAll()).click();
     await expectBannerVisible(page, false);
 
     await page.evaluate(() => window.astroConsent?.reset());
@@ -39,7 +39,7 @@ test.describe('Runtime API', () => {
   });
 
   test('show() displays the banner', async ({ page }) => {
-    await page.locator('[data-cc=accept-all]').click();
+    await page.locator(sel.acceptAll()).click();
     await expectBannerVisible(page, false);
 
     await page.evaluate(() => window.astroConsent?.show());
@@ -48,7 +48,7 @@ test.describe('Runtime API', () => {
 
   test('showPreferences() opens the modal', async ({ page }) => {
     await page.evaluate(() => window.astroConsent?.showPreferences());
-    const modal = page.locator('#cc-modal');
+    const modal = page.locator(sel.modal());
     await expect(modal).toHaveClass(/cc-visible/);
   });
 });

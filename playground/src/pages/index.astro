@@ -30,6 +30,25 @@ import Layout from '../layouts/Layout.astro';
   <h2>Current State</h2>
   <pre id="state">No consent data yet.</pre>
 
+  <script is:inline>
+    // Harness hook (#80): echo URL params onto <html data-cc-test-*> so
+    // Playwright fixtures (see `playground/e2e/helpers.ts` → `openBanner`)
+    // can parameterize the page without a build rebuild. Params currently
+    // recognized: layout, categoriesOnBanner, showCounter, equalWeight.
+    // Feature PRs (#39, #44, #77, #79) read these attrs to flip variants;
+    // before those land the attrs are inert and specs can `test.fixme()`.
+    (function () {
+      const params = new URLSearchParams(window.location.search);
+      const known = ['layout', 'categoriesOnBanner', 'showCounter', 'equalWeight'];
+      for (const key of known) {
+        const value = params.get(key);
+        if (value === null) continue;
+        const attr = 'data-cc-test-' + key.replace(/([A-Z])/g, '-$1').toLowerCase();
+        document.documentElement.setAttribute(attr, value);
+      }
+    })();
+  </script>
+
   <script>
     function refreshState() {
       const el = document.getElementById('state');
