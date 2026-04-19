@@ -664,47 +664,69 @@ import '@zdenekkurecka/astro-consent/styles';
 ```
 
 The styles use CSS custom properties, so you can theme them from your own
-stylesheet without forking anything:
+stylesheet without forking anything. Three inputs drive the entire palette —
+rebranding is typically a one-liner:
 
 ```css
 :root {
-  --cc-primary: #7c3aed;
-  --cc-primary-hover: #6d28d9;
-  --cc-radius: 0.75rem;
-  --cc-font-family: 'Inter', sans-serif;
+  --cc-primary: #16a34a; /* green accent; fill, hover, focus ring, auras, and required-badge tint all follow */
 }
 ```
 
-The tokens fall into three layers:
+#### Base inputs
+
+Override these to rebrand. Surfaces, strokes, and text steps are derived from
+them at the CSS layer via `color-mix()`, so you rarely need to touch anything
+else.
 
 | Token | Role |
 | --- | --- |
-| `--cc-primary` / `--cc-primary-hover` | Accent — primary-button fill and focus ring. |
-| `--cc-accent-ink` | Text colour painted on top of an accent fill (e.g. the primary button label). |
-| `--cc-bg` | Solid page-level background for surfaces that aren't floating. |
-| `--cc-surface` | Raised tint used inside cards for subtle separation. |
-| `--cc-surface-2` / `--cc-surface-3` | Top and bottom stops of the floating-surface gradient (banner + modal card). Both use 8-digit hex so the auras and backdrop-filter read through them. |
-| `--cc-text` / `--cc-text-muted` | Body copy and secondary copy. |
-| `--cc-text-dim` / `--cc-text-mute` | Tertiary steps for metadata and captions. |
-| `--cc-border` | Default divider / toggle-track stroke. |
-| `--cc-stroke-2` | Stronger border used around focused / elevated surfaces. |
-| `--cc-aura-1` / `--cc-aura-2` | Radial tint layers painted onto the banner and modal card. Use 8-digit hex with low alpha. |
-| `--cc-shadow-card` | Composite card shadow with an inset highlight line. Applied to the banner and modal card. |
-| `--cc-radius` / `--cc-radius-sm` / `--cc-radius-xs` / `--cc-radius-pill` | Corner radius scale. |
-| `--cc-font-family` | Font stack; defaults to `inherit` so the banner picks up your site font. |
-
-All tokens ship as **hex** (including 8-digit hex like `#3b82f614` for alpha)
-for maximum compatibility. There's no OKLCH in the shipped stylesheet.
-
-Swap just the accent without touching the depth layers:
+| `--cc-primary` | Accent — primary-button fill, focus ring, aura hue, required-badge tint. |
+| `--cc-tone` | Neutral base — paper in light mode, ink in dark mode. Drives `--cc-bg`, surface stops, strokes, and text steps. |
+| `--cc-text` | Body foreground. Drives every muted / dim / border step via `color-mix()`. |
 
 ```css
+/* Dark brand, warm tone */
 :root {
-  --cc-primary: #16a34a;
-  --cc-primary-hover: #15803d;
-  /* --cc-accent-ink defaults to #ffffff which pairs with the green */
+  --cc-primary: #f97316;
+  --cc-tone:    #0a0a0a;
+  --cc-text:    #fafafa;
 }
 ```
+
+#### Advanced overrides
+
+Every derived token remains declared, so you can still override any one of
+them individually if the default derivation doesn't land where you want.
+
+| Token | Default | Role |
+| --- | --- | --- |
+| `--cc-primary-hover` | `color-mix(… var(--cc-primary) 85%, var(--cc-text))` | Hover state; naturally darkens in light / lightens in dark by mixing toward `--cc-text`. |
+| `--cc-accent-ink` | `#ffffff` | Text on top of an accent fill (e.g. the primary button label). |
+| `--cc-bg` | `var(--cc-tone)` | Solid page-level background for surfaces that aren't floating. |
+| `--cc-surface` | `color-mix(… var(--cc-tone) 94%, var(--cc-text))` | Raised tint inside cards (secondary-button fill). |
+| `--cc-surface-2` | `color-mix(… var(--cc-surface) 90%, transparent)` | Top stop of the floating-surface gradient. |
+| `--cc-surface-3` | `color-mix(… var(--cc-tone) 95%, transparent)` | Bottom stop of the floating-surface gradient. |
+| `--cc-text-muted` | `color-mix(… var(--cc-text) 58%, var(--cc-tone))` | Secondary body copy. |
+| `--cc-text-dim` | `color-mix(… var(--cc-text) 80%, var(--cc-tone))` | Tertiary step; closer to `--cc-text`. |
+| `--cc-text-mute` | `color-mix(… var(--cc-text) 42%, var(--cc-tone))` | Tertiary step; furthest from `--cc-text`. |
+| `--cc-border` | `color-mix(… var(--cc-text) 12%, var(--cc-tone))` | Default divider / toggle-track stroke. |
+| `--cc-stroke-2` | `color-mix(… var(--cc-text) 25%, var(--cc-tone))` | Stronger border around focused / elevated surfaces. |
+| `--cc-aura-1` | `color-mix(… var(--cc-primary) 16%, transparent)` | Top-right radial tint on the card. |
+| `--cc-aura-2` | `color-mix(… var(--cc-primary) 6%, transparent)` | Bottom-left radial tint on the card. |
+| `--cc-shadow-card` | _explicit per-theme_ | Composite card shadow with an inset highlight line. Not derivable from a single input — override as a full `box-shadow` value. |
+| `--cc-radius` / `--cc-radius-sm` / `--cc-radius-xs` / `--cc-radius-pill` | _fixed_ | Corner radius scale. |
+| `--cc-font-family` | `inherit` | Font stack; defaults to `inherit` so the banner picks up your site font. |
+
+#### Browser support
+
+`color-mix()` is Baseline-widely-available (Chrome 111 / Safari 16.2 /
+Firefox 113, shipping since mid-2023). On older browsers the `color-mix()`
+expression is treated as an invalid value, so the derived tokens fall through
+to their initial — the card still paints, it just won't re-derive when only
+`--cc-primary` or `--cc-tone` is overridden. If you need to support legacy
+browsers, either override each token explicitly (using the defaults above as
+a starting point), or inline `color-mix()` at build time with PostCSS.
 
 ### Use with a strict Content Security Policy
 

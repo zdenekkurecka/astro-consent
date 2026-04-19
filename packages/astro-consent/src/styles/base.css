@@ -1,24 +1,46 @@
 /* @zdenekkurecka/astro-consent — base styles */
 
-/* ── Custom property defaults (zero specificity via :where) ── */
+/* ── Custom property defaults (zero specificity via :where) ──
+ *
+ * Three inputs drive the palette: --cc-primary (accent), --cc-tone (neutral
+ * base — paper in light, ink in dark), and --cc-text (body foreground). Every
+ * other colour token is derived via color-mix() so overriding any one input
+ * re-tints the whole card. Derived tokens remain declared so power users can
+ * still override them individually.
+ *
+ * color-mix() is Baseline-widely-available (Chrome 111 / Safari 16.2 /
+ * Firefox 113, mid-2023). Older browsers fall through to the declared
+ * expression as an invalid value and inherit the initial — the card still
+ * paints, it just stops re-deriving when a single input is overridden.
+ */
 
 :where(:root) {
+  /* ── Inputs ── */
   --cc-primary: #2563eb;
-  --cc-primary-hover: #1d4ed8;
-  --cc-bg: #ffffff;
-  --cc-surface: #f8fafc;
-  --cc-surface-2: #ffffffe6;
-  --cc-surface-3: #f5f5f4f2;
+  --cc-tone:    #ffffff;
+  --cc-text:    #0f172a;
+
+  /* ── Derived accent ── */
+  --cc-primary-hover: color-mix(in oklab, var(--cc-primary) 85%, var(--cc-text));
+  --cc-accent-ink:    #ffffff;
+  --cc-aura-1: color-mix(in srgb, var(--cc-primary) 16%, transparent);
+  --cc-aura-2: color-mix(in srgb, var(--cc-primary)  6%, transparent);
+
+  /* ── Derived surfaces ── */
+  --cc-bg:        var(--cc-tone);
+  --cc-surface:   color-mix(in oklab, var(--cc-tone) 94%, var(--cc-text));
+  --cc-surface-2: color-mix(in oklab, var(--cc-surface) 90%, transparent);
+  --cc-surface-3: color-mix(in oklab, var(--cc-tone)   95%, transparent);
+
+  /* ── Derived strokes / text steps ── */
+  --cc-border:     color-mix(in oklab, var(--cc-text) 12%, var(--cc-tone));
+  --cc-stroke-2:   color-mix(in oklab, var(--cc-text) 25%, var(--cc-tone));
+  --cc-text-muted: color-mix(in oklab, var(--cc-text) 58%, var(--cc-tone));
+  --cc-text-dim:   color-mix(in oklab, var(--cc-text) 80%, var(--cc-tone));
+  --cc-text-mute:  color-mix(in oklab, var(--cc-text) 42%, var(--cc-tone));
+
+  /* ── Non-derivable / geometry ── */
   --cc-tint-rgb: 0, 0, 0;
-  --cc-text: #0f172a;
-  --cc-text-muted: #64748b;
-  --cc-text-dim: #475569;
-  --cc-text-mute: #94a3b8;
-  --cc-border: #e2e8f0;
-  --cc-stroke-2: #cbd5e1;
-  --cc-accent-ink: #ffffff;
-  --cc-aura-1: #3b82f614;
-  --cc-aura-2: #2563eb0a;
   --cc-radius: 1.5rem;
   --cc-radius-sm: 0.5rem;
   --cc-radius-xs: 0.25rem;
@@ -31,33 +53,20 @@
 }
 
 /* ── Dark mode defaults (prefers-color-scheme) ──────────────
- * Zero specificity via :where() so any user override in their
- * own stylesheet wins without !important.
+ * Swapping the three inputs re-derives surfaces, strokes, and text steps
+ * automatically. --cc-tint-rgb and --cc-shadow-card can't be derived from
+ * a single input, so they stay explicit.
  * WCAG 2.1 AA: text on --cc-bg and --cc-text-muted on --cc-bg
  * both clear 4.5:1 contrast.
  */
 @media (prefers-color-scheme: dark) {
   :where(:root) {
     --cc-primary: #3b82f6;
-    --cc-primary-hover: #60a5fa;
-    /* Warm near-black neutrals (stone palette) matching the v0.4 prototype;
+    /* Warm near-black neutral (stone palette) matching the v0.4 prototype;
      * blue stays as the accent hue only, so the card no longer reads slate. */
-    --cc-bg: #1c1917;
-    --cc-surface: #292524;
-    --cc-surface-2: #2a2825d9;
-    --cc-surface-3: #1c1a18e6;
-    --cc-tint-rgb: 255, 255, 255;
+    --cc-tone: #1c1917;
     --cc-text: #fafaf9;
-    --cc-text-muted: #a8a29e;
-    --cc-text-dim: #d6d3d1;
-    --cc-text-mute: #78716c;
-    --cc-border: #44403c;
-    /* Translucent white hairline for elevated surfaces — gives the "glowing
-     * edge" the prototype relies on for dark-glass cards. */
-    --cc-stroke-2: #ffffff24;
-    --cc-accent-ink: #ffffff;
-    --cc-aura-1: #3b82f629;
-    --cc-aura-2: #60a5fa14;
+    --cc-tint-rgb: 255, 255, 255;
     --cc-shadow-card:
       inset 0 1px 0 #ffffff0f,
       0 24px 64px #00000080,
@@ -74,21 +83,9 @@
  */
 :where([data-cc-theme='light']) {
   --cc-primary: #2563eb;
-  --cc-primary-hover: #1d4ed8;
-  --cc-bg: #ffffff;
-  --cc-surface: #f8fafc;
-  --cc-surface-2: #ffffffe6;
-  --cc-surface-3: #f5f5f4f2;
-  --cc-tint-rgb: 0, 0, 0;
+  --cc-tone: #ffffff;
   --cc-text: #0f172a;
-  --cc-text-muted: #64748b;
-  --cc-text-dim: #475569;
-  --cc-text-mute: #94a3b8;
-  --cc-border: #e2e8f0;
-  --cc-stroke-2: #cbd5e1;
-  --cc-accent-ink: #ffffff;
-  --cc-aura-1: #3b82f614;
-  --cc-aura-2: #2563eb0a;
+  --cc-tint-rgb: 0, 0, 0;
   --cc-shadow-card:
     inset 0 1px 0 #ffffff14,
     0 24px 64px #0f172a26,
@@ -97,21 +94,9 @@
 
 :where([data-cc-theme='dark']) {
   --cc-primary: #3b82f6;
-  --cc-primary-hover: #60a5fa;
-  --cc-bg: #1c1917;
-  --cc-surface: #292524;
-  --cc-surface-2: #2a2825d9;
-  --cc-surface-3: #1c1a18e6;
-  --cc-tint-rgb: 255, 255, 255;
+  --cc-tone: #1c1917;
   --cc-text: #fafaf9;
-  --cc-text-muted: #a8a29e;
-  --cc-text-dim: #d6d3d1;
-  --cc-text-mute: #78716c;
-  --cc-border: #44403c;
-  --cc-stroke-2: #ffffff24;
-  --cc-accent-ink: #ffffff;
-  --cc-aura-1: #3b82f629;
-  --cc-aura-2: #60a5fa14;
+  --cc-tint-rgb: 255, 255, 255;
   --cc-shadow-card:
     inset 0 1px 0 #ffffff0f,
     0 24px 64px #00000080,
@@ -331,7 +316,7 @@
 
 .cc-badge--required {
   color: var(--cc-primary);
-  background-color: rgba(37, 99, 235, 0.12);
+  background-color: color-mix(in srgb, var(--cc-primary) 12%, transparent);
 }
 
 .cc-category-description {
