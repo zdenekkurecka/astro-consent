@@ -1,4 +1,6 @@
 import type {
+  BannerLayout,
+  BannerPosition,
   ConsentCategory,
   ConsentCategoryText,
   ConsentText,
@@ -148,6 +150,77 @@ const MODAL_ID = 'cc-modal';
 const MODAL_TITLE_ID = 'cc-modal-title';
 const OVERLAY_ID = 'cc-overlay';
 const BANNER_ID = 'cc-banner';
+const BANNER_SCRIM_ID = 'cc-banner-scrim';
+
+const VALID_LAYOUTS: readonly BannerLayout[] = ['bar', 'box', 'cloud', 'popup'];
+const VALID_POSITIONS_PER_LAYOUT: Record<BannerLayout, readonly BannerPosition[]> = {
+  bar: ['bottom', 'top'],
+  box: ['bottom-right', 'bottom-left', 'top-right', 'top-left'],
+  cloud: ['bottom', 'top'],
+  popup: ['center'],
+};
+const DEFAULT_POSITION_FOR: Record<BannerLayout, BannerPosition> = {
+  bar: 'bottom',
+  box: 'bottom-right',
+  cloud: 'bottom',
+  popup: 'center',
+};
+
+/**
+ * Resolved banner placement after applying defaults, validating the layout /
+ * position pairing, and normalizing the `scrim` flag (forced on for `popup`,
+ * off for `bar` / `box`, passthrough for `cloud`).
+ */
+export interface ResolvedBannerOptions {
+  layout: BannerLayout;
+  position: BannerPosition;
+  scrim: boolean;
+}
+
+/**
+ * Resolve banner layout / position / scrim from the merged config. Also
+ * honors `<html data-cc-test-layout>` and `<html data-cc-test-position>` so
+ * the playground harness (see `playground/e2e/helpers.ts`) can exercise
+ * variants via URL params without a rebuild.
+ *
+ * Invalid layout/position pairings fall back to the layout's default and
+ * emit a single `console.warn` so misconfiguration is loud in dev. Unknown
+ * layouts fall back to `bar`.
+ */
+export function resolveBannerOptions(
+  config: SerializableConsentConfig,
+): ResolvedBannerOptions {
+  const banner = config.ui?.banner ?? {};
+  const html = typeof document !== 'undefined' ? document.documentElement : null;
+  const harnessLayout = html?.getAttribute('data-cc-test-layout') as BannerLayout | null;
+  const harnessPosition = html?.getAttribute('data-cc-test-position') as BannerPosition | null;
+
+  let layout = (harnessLayout ?? banner.layout ?? 'bar') as BannerLayout;
+  if (!VALID_LAYOUTS.includes(layout)) {
+    console.warn(
+      `[astro-consent] Unknown banner layout "${layout}". Falling back to "bar".`,
+    );
+    layout = 'bar';
+  }
+
+  const requestedPosition = (harnessPosition ?? banner.position) as BannerPosition | undefined;
+  let position = requestedPosition ?? DEFAULT_POSITION_FOR[layout];
+  if (requestedPosition && !VALID_POSITIONS_PER_LAYOUT[layout].includes(requestedPosition)) {
+    console.warn(
+      `[astro-consent] Position "${requestedPosition}" is invalid for layout "${layout}". ` +
+        `Falling back to "${DEFAULT_POSITION_FOR[layout]}".`,
+    );
+    position = DEFAULT_POSITION_FOR[layout];
+  }
+
+  // Scrim: forced true for popup (the scrim is the layout's premise),
+  // forced false for bar/box, passthrough for cloud.
+  let scrim = banner.scrim ?? false;
+  if (layout === 'popup') scrim = true;
+  else if (layout === 'bar' || layout === 'box') scrim = false;
+
+  return { layout, position, scrim };
+}
 
 let previouslyFocused: HTMLElement | null = null;
 
@@ -183,10 +256,36 @@ function createPolicyLinkHTML(
   return `<a class="${className}" href="${escapeHtml(safeUrl)}" data-cc="policy-link">${escapeHtml(label)}</a>`;
 }
 
-function createBannerHTML(config: SerializableConsentConfig, text: ResolvedConsentText): string {
+function createBannerHTML(
+  config: SerializableConsentConfig,
+  text: ResolvedConsentText,
+  banner: ResolvedBannerOptions,
+): string {
   const policyLink = createPolicyLinkHTML(config.cookiePolicy, 'cc-policy-link');
+  // Popup gets role="dialog" + aria-modal so it's announced as modal UI; the
+  // other variants stay as a polite region.
+  const roleAttrs =
+    banner.layout === 'popup'
+      ? `role="dialog" aria-modal="true" aria-label="Cookie consent"`
+      : `role="region" aria-label="Cookie consent"`;
+  // Scrim element shares the banner's visibility class; positioned behind the
+  // banner via z-index. Rendered only when scrim is active so the DOM stays
+  // minimal for the default bar variant.
+  const scrimHTML = banner.scrim
+    ? `<div class="cc-banner-scrim" id="${BANNER_SCRIM_ID}" data-testid="cc-banner-scrim" aria-hidden="true"></div>`
+    : '';
   return `
-    <div class="cc-banner" id="${BANNER_ID}" data-testid="cc-banner" role="region" aria-label="Cookie consent" aria-hidden="true">
+    ${scrimHTML}
+    <div
+      class="cc-banner"
+      id="${BANNER_ID}"
+      data-testid="cc-banner"
+      data-cc-layout="${banner.layout}"
+      data-cc-position="${banner.position}"
+      data-cc-scrim="${banner.scrim ? 'true' : 'false'}"
+      ${roleAttrs}
+      aria-hidden="true"
+    >
       <div class="cc-banner-inner">
         <p class="cc-banner-text">
           ${escapeHtml(text.bannerText)}
@@ -300,9 +399,10 @@ function createModalHTML(config: SerializableConsentConfig, text: ResolvedConsen
 export function injectUI(config: SerializableConsentConfig, text: ResolvedConsentText): void {
   if (document.getElementById(CONTAINER_ID)) return;
 
+  const banner = resolveBannerOptions(config);
   const container = document.createElement('div');
   container.id = CONTAINER_ID;
-  container.innerHTML = createBannerHTML(config, text) + createModalHTML(config, text);
+  container.innerHTML = createBannerHTML(config, text, banner) + createModalHTML(config, text);
   document.body.appendChild(container);
 
   // Apply forced color mode (if any). "auto" / undefined leaves the
@@ -335,12 +435,16 @@ export function showBanner(): void {
   const el = document.getElementById(BANNER_ID);
   el?.classList.add('cc-visible');
   el?.setAttribute('aria-hidden', 'false');
+  const scrim = document.getElementById(BANNER_SCRIM_ID);
+  scrim?.classList.add('cc-visible');
 }
 
 export function hideBanner(): void {
   const el = document.getElementById(BANNER_ID);
   el?.classList.remove('cc-visible');
   el?.setAttribute('aria-hidden', 'true');
+  const scrim = document.getElementById(BANNER_SCRIM_ID);
+  scrim?.classList.remove('cc-visible');
 }
 
 /**

@@ -50,6 +50,15 @@
     0 24px 64px #0f172a26,
     0 4px 16px #0f172a1a;
   --cc-font-family: inherit;
+
+  /* ── Banner layout geometry ──
+   * Shared across `bar`, `box`, `cloud`, `popup` variants. Override these to
+   * tune widths or viewport gutters without re-writing per-variant selectors.
+   */
+  --cc-banner-max-width: 72rem;   /* bar / cloud content cap */
+  --cc-box-width: 26rem;          /* box variant target width (≈ 420px) */
+  --cc-popup-width: 30rem;        /* popup variant target width (≈ 480px) */
+  --cc-banner-offset: 1rem;       /* gap from viewport edges for box / cloud */
 }
 
 /* ── Dark mode defaults (prefers-color-scheme) ──────────────
@@ -105,11 +114,15 @@
 
 /* ── Banner ─────────────────────────────────────────────── */
 
+/*
+ * The banner is a single element whose layout (`bar`, `box`, `cloud`, `popup`)
+ * and position (`top`, `bottom`, `bottom-right`, …) are selected via data
+ * attributes set by `createBannerHTML()`. Base rules here cover the shared
+ * appearance — surface, typography, transition — and per-layout blocks below
+ * handle positioning, width, and edge treatment.
+ */
 .cc-banner {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
   z-index: 9999;
   background:
     radial-gradient(120% 70% at 90% 0%, var(--cc-aura-1) 0%, transparent 55%),
@@ -117,11 +130,9 @@
     linear-gradient(180deg, var(--cc-surface-2), var(--cc-surface-3));
   backdrop-filter: blur(24px) saturate(1.2);
   -webkit-backdrop-filter: blur(24px) saturate(1.2);
-  border-top: 1px solid var(--cc-stroke-2);
   box-shadow: var(--cc-shadow-card);
   font-family: var(--cc-font-family);
   color: var(--cc-text);
-  transform: translateY(100%);
   opacity: 0;
   transition: transform 0.3s ease, opacity 0.3s ease;
   pointer-events: none;
@@ -129,13 +140,12 @@
 }
 
 .cc-banner.cc-visible {
-  transform: translateY(0);
   opacity: 1;
   pointer-events: auto;
 }
 
 .cc-banner-inner {
-  max-width: 72rem;
+  max-width: var(--cc-banner-max-width);
   margin: 0 auto;
   padding: 1rem 1.5rem;
   display: flex;
@@ -159,6 +169,135 @@
   gap: 0.5rem;
   flex-shrink: 0;
   flex-wrap: wrap;
+}
+
+/* ── Banner scrim ───────────────────────────────────────────
+ * Rendered only when `data-cc-scrim="true"` on the banner (popup always;
+ * cloud when `ui.banner.scrim: true`). Click-inert by design — consent
+ * requires an explicit choice, so clicking the scrim does nothing.
+ */
+.cc-banner-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background-color: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.cc-banner-scrim.cc-visible {
+  opacity: 1;
+  /* Intentionally no pointer-events: auto — scrim is a visual dimmer only. */
+}
+
+/* ── Layout: bar ─── full-width strip, edge to edge ─── */
+.cc-banner[data-cc-layout='bar'] {
+  left: 0;
+  right: 0;
+}
+.cc-banner[data-cc-layout='bar'][data-cc-position='bottom'] {
+  bottom: 0;
+  border-top: 1px solid var(--cc-stroke-2);
+  transform: translateY(100%);
+}
+.cc-banner[data-cc-layout='bar'][data-cc-position='top'] {
+  top: 0;
+  border-bottom: 1px solid var(--cc-stroke-2);
+  transform: translateY(-100%);
+}
+.cc-banner[data-cc-layout='bar'].cc-visible {
+  transform: translateY(0);
+}
+
+/* ── Layout: box ─── compact corner card ─── */
+.cc-banner[data-cc-layout='box'] {
+  width: min(var(--cc-box-width), calc(100vw - var(--cc-banner-offset) * 2));
+  border: 1px solid var(--cc-stroke-2);
+  border-radius: var(--cc-radius);
+  overflow: hidden;
+  transform: translateY(24px);
+}
+.cc-banner[data-cc-layout='box'][data-cc-position='bottom-right'] {
+  bottom: var(--cc-banner-offset);
+  right: var(--cc-banner-offset);
+}
+.cc-banner[data-cc-layout='box'][data-cc-position='bottom-left'] {
+  bottom: var(--cc-banner-offset);
+  left: var(--cc-banner-offset);
+}
+.cc-banner[data-cc-layout='box'][data-cc-position='top-right'] {
+  top: var(--cc-banner-offset);
+  right: var(--cc-banner-offset);
+  transform: translateY(-24px);
+}
+.cc-banner[data-cc-layout='box'][data-cc-position='top-left'] {
+  top: var(--cc-banner-offset);
+  left: var(--cc-banner-offset);
+  transform: translateY(-24px);
+}
+.cc-banner[data-cc-layout='box'].cc-visible {
+  transform: translateY(0);
+}
+.cc-banner[data-cc-layout='box'] .cc-banner-inner {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+.cc-banner[data-cc-layout='box'] .cc-banner-actions {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.cc-banner[data-cc-layout='box'] .cc-banner-actions > :nth-child(3) {
+  grid-column: 1 / -1;
+}
+
+/* ── Layout: cloud ─── floating padded strip ─── */
+.cc-banner[data-cc-layout='cloud'] {
+  left: var(--cc-banner-offset);
+  right: var(--cc-banner-offset);
+  border: 1px solid var(--cc-stroke-2);
+  border-radius: var(--cc-radius);
+  overflow: hidden;
+}
+.cc-banner[data-cc-layout='cloud'][data-cc-position='bottom'] {
+  bottom: var(--cc-banner-offset);
+  transform: translateY(calc(100% + var(--cc-banner-offset)));
+}
+.cc-banner[data-cc-layout='cloud'][data-cc-position='top'] {
+  top: var(--cc-banner-offset);
+  transform: translateY(calc(-100% - var(--cc-banner-offset)));
+}
+.cc-banner[data-cc-layout='cloud'].cc-visible {
+  transform: translateY(0);
+}
+
+/* ── Layout: popup ─── centered modal card ─── */
+.cc-banner[data-cc-layout='popup'] {
+  top: 50%;
+  left: 50%;
+  width: min(var(--cc-popup-width), calc(100vw - var(--cc-banner-offset) * 2));
+  max-height: calc(100vh - var(--cc-banner-offset) * 2);
+  overflow-y: auto;
+  border: 1px solid var(--cc-stroke-2);
+  border-radius: var(--cc-radius);
+  transform: translate(-50%, -50%) scale(0.96);
+}
+.cc-banner[data-cc-layout='popup'].cc-visible {
+  transform: translate(-50%, -50%) scale(1);
+}
+.cc-banner[data-cc-layout='popup'] .cc-banner-inner {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+.cc-banner[data-cc-layout='popup'] .cc-banner-actions {
+  justify-content: center;
 }
 
 /* ── Modal ──────────────────────────────────────────────── */
