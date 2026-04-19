@@ -25,6 +25,8 @@ const BUILT_IN_DEFAULTS: ResolvedConsentText = {
   modalTitle: 'Cookie preferences',
   closeAriaLabel: 'Close preferences',
   savePreferences: 'Save preferences',
+  hidePreferences: 'Hide preferences',
+  dismissAriaLabel: 'Dismiss',
   essentialLabel: 'Essential',
   essentialDescription: 'Required for the website to function. Cannot be disabled.',
   essentialBadge: 'Required',
@@ -51,6 +53,8 @@ function mergeText(base: ResolvedConsentText, layer: ConsentText | undefined): R
   if (layer.modalTitle !== undefined) next.modalTitle = layer.modalTitle;
   if (layer.closeAriaLabel !== undefined) next.closeAriaLabel = layer.closeAriaLabel;
   if (layer.savePreferences !== undefined) next.savePreferences = layer.savePreferences;
+  if (layer.hidePreferences !== undefined) next.hidePreferences = layer.hidePreferences;
+  if (layer.dismissAriaLabel !== undefined) next.dismissAriaLabel = layer.dismissAriaLabel;
   if (layer.essentialLabel !== undefined) next.essentialLabel = layer.essentialLabel;
   if (layer.essentialDescription !== undefined) {
     next.essentialDescription = layer.essentialDescription;
@@ -175,6 +179,8 @@ export interface ResolvedBannerOptions {
   layout: BannerLayout;
   position: BannerPosition;
   scrim: boolean;
+  /** Render category toggles inline on the banner (single-layer flow). */
+  categoriesOnBanner: boolean;
 }
 
 /**
@@ -219,7 +225,13 @@ export function resolveBannerOptions(
   if (layout === 'popup') scrim = true;
   else if (layout === 'bar' || layout === 'box') scrim = false;
 
-  return { layout, position, scrim };
+  const harnessCategoriesOnBanner = html?.getAttribute('data-cc-test-categories-on-banner');
+  const categoriesOnBanner =
+    harnessCategoriesOnBanner != null
+      ? harnessCategoriesOnBanner === 'true'
+      : banner.categoriesOnBanner === true;
+
+  return { layout, position, scrim, categoriesOnBanner };
 }
 
 let previouslyFocused: HTMLElement | null = null;
@@ -274,6 +286,25 @@ function createBannerHTML(
   const scrimHTML = banner.scrim
     ? `<div class="cc-banner-scrim" id="${BANNER_SCRIM_ID}" data-testid="cc-banner-scrim" aria-hidden="true"></div>`
     : '';
+
+  // Single-layer mode swaps the action row for a label-morphing trio
+  // (Customize ↔ Hide preferences, Accept all ↔ Save preferences) and
+  // renders the inline categories + dismiss button below.
+  const singleLayer = banner.categoriesOnBanner;
+  const categoriesHTML = singleLayer ? createBannerCategoriesHTML(config, text) : '';
+  const closeBtnHTML = singleLayer
+    ? `<button type="button" class="cc-banner-close" data-cc="dismiss" aria-label="${escapeHtml(text.dismissAriaLabel)}"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><line x1="2" y1="2" x2="10" y2="10"/><line x1="10" y1="2" x2="2" y2="10"/></svg></button>`
+    : '';
+  const manageButtonHTML = singleLayer
+    ? `<button type="button" class="cc-btn cc-btn-ghost" data-cc="manage"><span class="cc-btn-label" data-cc-label="collapsed">${escapeHtml(text.manage)}</span><span class="cc-btn-label" data-cc-label="expanded">${escapeHtml(text.hidePreferences)}</span></button>`
+    : `<button type="button" class="cc-btn cc-btn-secondary" data-cc="manage">${escapeHtml(text.manage)}</button>`;
+  const acceptButtonHTML = singleLayer
+    ? `<button type="button" class="cc-btn cc-btn-primary" data-cc="accept-all"><span class="cc-btn-label" data-cc-label="collapsed">${escapeHtml(text.acceptAll)}</span><span class="cc-btn-label" data-cc-label="expanded">${escapeHtml(text.savePreferences)}</span></button>`
+    : `<button type="button" class="cc-btn cc-btn-primary" data-cc="accept-all">${escapeHtml(text.acceptAll)}</button>`;
+
+  const expandedAttr = singleLayer ? `data-cc-expanded="false"` : '';
+  const singleLayerAttr = singleLayer ? `data-cc-categories-on-banner="true"` : '';
+
   return `
     ${scrimHTML}
     <div
@@ -283,21 +314,53 @@ function createBannerHTML(
       data-cc-layout="${banner.layout}"
       data-cc-position="${banner.position}"
       data-cc-scrim="${banner.scrim ? 'true' : 'false'}"
+      ${singleLayerAttr}
+      ${expandedAttr}
       ${roleAttrs}
       aria-hidden="true"
     >
+      ${closeBtnHTML}
       <div class="cc-banner-inner">
         <p class="cc-banner-text">
           ${escapeHtml(text.bannerText)}
           ${policyLink}
         </p>
+        ${categoriesHTML}
         <div class="cc-banner-actions">
-          <button type="button" class="cc-btn cc-btn-primary" data-cc="accept-all">${escapeHtml(text.acceptAll)}</button>
-          <button type="button" class="cc-btn cc-btn-primary" data-cc="reject-all">${escapeHtml(text.rejectAll)}</button>
-          <button type="button" class="cc-btn cc-btn-secondary" data-cc="manage">${escapeHtml(text.manage)}</button>
+          ${acceptButtonHTML}
+          <button type="button" class="cc-btn cc-btn-primary cc-banner-reject" data-cc="reject-all">${escapeHtml(text.rejectAll)}</button>
+          ${manageButtonHTML}
         </div>
       </div>
     </div>`;
+}
+
+function createBannerCategoriesHTML(
+  config: SerializableConsentConfig,
+  text: ResolvedConsentText,
+): string {
+  const essentialToggle = createCategoryToggle(
+    'essential',
+    text.essentialLabel,
+    text.essentialDescription,
+    true,
+    true,
+    text.badgeRequired,
+  );
+  const categoryToggles = Object.entries(config.categories)
+    .map(([key, cat]) => {
+      const resolved = resolveCategoryText(key, cat, text);
+      return createCategoryToggle(
+        key,
+        resolved.label,
+        resolved.description,
+        false,
+        cat.default,
+        text.badgeOptional,
+      );
+    })
+    .join('');
+  return `<div class="cc-categories" data-cc-banner-categories>${essentialToggle}${categoryToggles}</div>`;
 }
 
 function createCategoryToggle(
@@ -402,7 +465,11 @@ export function injectUI(config: SerializableConsentConfig, text: ResolvedConsen
   const banner = resolveBannerOptions(config);
   const container = document.createElement('div');
   container.id = CONTAINER_ID;
-  container.innerHTML = createBannerHTML(config, text, banner) + createModalHTML(config, text);
+  // Single-layer mode renders categories inline on the banner, so the modal
+  // is never reachable — skip injecting it to keep the DOM minimal and avoid
+  // a phantom dialog that `Tab` could land in.
+  const modalHTML = banner.categoriesOnBanner ? '' : createModalHTML(config, text);
+  container.innerHTML = createBannerHTML(config, text, banner) + modalHTML;
   document.body.appendChild(container);
 
   // Apply forced color mode (if any). "auto" / undefined leaves the
@@ -568,9 +635,24 @@ export function isModalVisible(): boolean {
 // script-blocking markup (which reuses `data-cc-category` on <script>/<iframe>
 // elements) doesn't leak into modal state reads.
 const MODAL_TOGGLE_SELECTOR = `#${MODAL_ID} [role="switch"][data-cc-category]`;
+// Mirror selector for single-layer mode where toggles live on the banner
+// rather than in the modal. Same scoping rationale as `MODAL_TOGGLE_SELECTOR`.
+const BANNER_TOGGLE_SELECTOR = `#${BANNER_ID} [role="switch"][data-cc-category]`;
 
-export function updateModalToggles(categories: Record<string, boolean>): void {
-  const switches = document.querySelectorAll<HTMLElement>(MODAL_TOGGLE_SELECTOR);
+function readSelections(selector: string): Record<string, boolean> {
+  const selections: Record<string, boolean> = {};
+  const switches = document.querySelectorAll<HTMLElement>(selector);
+  for (const sw of switches) {
+    const key = sw.getAttribute('data-cc-category');
+    if (key && key !== 'essential') {
+      selections[key] = sw.getAttribute('aria-checked') === 'true';
+    }
+  }
+  return selections;
+}
+
+function applyToggleState(selector: string, categories: Record<string, boolean>): void {
+  const switches = document.querySelectorAll<HTMLElement>(selector);
   for (const sw of switches) {
     const key = sw.getAttribute('data-cc-category');
     if (key && sw.getAttribute('data-locked') !== 'true') {
@@ -579,14 +661,53 @@ export function updateModalToggles(categories: Record<string, boolean>): void {
   }
 }
 
+export function updateModalToggles(categories: Record<string, boolean>): void {
+  applyToggleState(MODAL_TOGGLE_SELECTOR, categories);
+}
+
 export function getModalSelections(): Record<string, boolean> {
-  const selections: Record<string, boolean> = {};
-  const switches = document.querySelectorAll<HTMLElement>(MODAL_TOGGLE_SELECTOR);
-  for (const sw of switches) {
-    const key = sw.getAttribute('data-cc-category');
-    if (key && key !== 'essential') {
-      selections[key] = sw.getAttribute('aria-checked') === 'true';
-    }
+  return readSelections(MODAL_TOGGLE_SELECTOR);
+}
+
+export function updateBannerToggles(categories: Record<string, boolean>): void {
+  applyToggleState(BANNER_TOGGLE_SELECTOR, categories);
+}
+
+export function getBannerSelections(): Record<string, boolean> {
+  return readSelections(BANNER_TOGGLE_SELECTOR);
+}
+
+/**
+ * Returns `true` when the rendered banner is in single-layer mode (categories
+ * inline). Read off the live DOM rather than re-resolving config so
+ * `setBannerExpanded` and the click handlers stay cheap.
+ */
+export function isCategoriesOnBanner(): boolean {
+  const banner = document.getElementById(BANNER_ID);
+  return banner?.getAttribute('data-cc-categories-on-banner') === 'true';
+}
+
+export function isBannerExpanded(): boolean {
+  const banner = document.getElementById(BANNER_ID);
+  return banner?.getAttribute('data-cc-expanded') === 'true';
+}
+
+/**
+ * Flip the single-layer banner between collapsed and expanded. Sets
+ * `data-cc-expanded` (read by CSS to drive the height/opacity transition and
+ * the button-label morphing) and moves focus into the first interactive
+ * switch when expanding so keyboard users land on the new controls.
+ */
+export function setBannerExpanded(expanded: boolean): void {
+  const banner = document.getElementById(BANNER_ID);
+  if (!banner) return;
+  banner.setAttribute('data-cc-expanded', expanded ? 'true' : 'false');
+  if (expanded) {
+    requestAnimationFrame(() => {
+      const firstSwitch = banner.querySelector<HTMLElement>(
+        '[role="switch"][data-cc-category]:not([data-locked="true"])',
+      );
+      firstSwitch?.focus();
+    });
   }
-  return selections;
 }

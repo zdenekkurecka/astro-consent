@@ -30,6 +30,7 @@
   - [Customise banner & modal text (and localize it)](#customise-banner--modal-text-and-localize-it)
   - [Choose a banner layout](#choose-a-banner-layout)
   - [Theme the UI](#theme-the-ui)
+  - [Single-layer consent (toggles on the banner)](#single-layer-consent-toggles-on-the-banner)
   - [Use with a strict Content Security Policy](#use-with-a-strict-content-security-policy)
   - [Debug mode](#debug-mode)
 - [Runtime API](#runtime-api)
@@ -64,6 +65,8 @@ they force you to serialize your tracker callbacks into a JSON config.
 ## Features
 
 - **Banner + preferences modal** out of the box
+- **Single-layer consent** — toggles inline on the banner with one config
+  flag, eliminating the modal click for sites with few categories
 - **Category-based consent** (`analytics`, `marketing`, … — whatever you
   declare), plus an always-on implicit `essential` category
 - **Versioned consent** — bump a number to re-prompt every user
@@ -894,6 +897,59 @@ override per-variant styling without forking the integration.
 }
 ```
 
+### Single-layer consent (toggles on the banner)
+
+The default flow is two layers: banner → preferences modal. For sites with
+only 2–3 categories, the modal can feel excessive. Set
+`ui.banner.categoriesOnBanner: true` to render the toggles inline on the
+banner and skip the modal entirely:
+
+```ts
+cookieConsent({
+  version: 1,
+  categories: {
+    analytics: { label: 'Analytics', description: '…', default: false },
+    marketing: { label: 'Marketing', description: '…', default: false },
+  },
+  ui: {
+    banner: {
+      layout: 'cloud',
+      categoriesOnBanner: true,
+    },
+  },
+});
+```
+
+The banner starts collapsed. Clicking **Customize** expands it in place and
+morphs the action labels:
+
+| State     | Ghost button       | Primary button     |
+| --------- | ------------------ | ------------------ |
+| Collapsed | `text.manage`      | `text.acceptAll`   |
+| Expanded  | `text.hidePreferences` | `text.savePreferences` |
+
+Once expanded, the "Reject optional" button fades and collapses to zero
+width — it's redundant when the user has direct switch control. A small
+`×` close button (labelled via `text.dismissAriaLabel`) lets the user
+dismiss the banner without recording consent; it will reappear on the
+next page load.
+
+`window.astroConsent.showPreferences()` continues to work — in single-layer
+mode it flips the banner into expanded mode instead of opening the modal.
+
+**Layout fit.** Single-layer mode works best in layouts with room for the
+expanded card:
+
+| Layout  | Fit                                                    |
+| ------- | ------------------------------------------------------ |
+| `cloud` | ✅ ideal — centered padded strip with room to expand   |
+| `popup` | ✅ centered overlay; scrolls if categories overflow    |
+| `bar`   | works, but vertical space is tight                     |
+| `box`   | not recommended — typically too narrow                 |
+
+**Behavior when `false` (default).** Two-layer flow preserved. No
+breaking change for existing installations.
+
 ### Use with a strict Content Security Policy
 
 The integration is compatible with strict CSPs out of the box:
@@ -1082,9 +1138,15 @@ if you don't declare it, and the narrow type kicks in the moment you do.
   `aria-disabled="true"` on the locked essential category). `Space` and
   `Enter` flip them; focus rings follow `:focus-visible`.
 - Respects `prefers-reduced-motion: reduce` — the banner/modal fade, the
-  switch thumb transition, and the overlay fade are all dropped when the
-  user has opted into reduced motion.
+  switch thumb transition, the overlay fade, and the single-layer
+  expand/collapse + reject-button collapse are all dropped when the user
+  has opted into reduced motion.
 - All buttons have `type="button"` so they never submit ambient forms.
+- In single-layer mode (`ui.banner.categoriesOnBanner: true`), the banner
+  retains `role="dialog"` only when paired with the `popup` layout (the
+  card sits atop a scrim); other layouts use `role="region"` with
+  `aria-label="Cookie consent"`. Focus moves to the first interactive
+  switch when the banner expands.
 
 ## Repository layout
 

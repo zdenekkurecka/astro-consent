@@ -300,6 +300,142 @@
   justify-content: center;
 }
 
+/* ── Single-layer banner (categoriesOnBanner) ───────────────
+ *
+ * When `ui.banner.categoriesOnBanner: true`, the banner renders the
+ * category toggles inline and starts collapsed. Clicking "Customize"
+ * sets `data-cc-expanded="true"` on the banner, which:
+ *   • slides the `.cc-categories` block in via max-height + opacity,
+ *   • swaps the morphing button labels (Customize ↔ Hide preferences,
+ *     Accept all ↔ Save preferences) via `[data-cc-label]`,
+ *   • fades and collapses the "Reject optional" button to zero width.
+ *
+ * The single-layer banner forces a column layout in `.cc-banner-inner`
+ * across every variant — categories never sit beside the text.
+ */
+
+.cc-banner[data-cc-categories-on-banner='true'] {
+  position: fixed;
+}
+
+.cc-banner[data-cc-categories-on-banner='true'] .cc-banner-inner {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1rem;
+}
+
+.cc-banner-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--cc-radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--cc-text-mute);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  z-index: 1;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.cc-banner-close:hover {
+  background-color: rgba(var(--cc-tint-rgb), 0.06);
+  color: var(--cc-text);
+  border-color: var(--cc-border);
+}
+
+.cc-banner-close:focus-visible {
+  outline: 2px solid var(--cc-primary);
+  outline-offset: 2px;
+}
+
+/* Categories container — collapsed by default; expands on
+ * `data-cc-expanded="true"`. Animating max-height is approximate but cheap;
+ * 32rem is well above the typical 3-category footprint. */
+.cc-banner[data-cc-categories-on-banner='true'] .cc-categories {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  transition: max-height 0.35s ease, opacity 0.25s ease, margin 0.25s ease;
+}
+
+.cc-banner[data-cc-categories-on-banner='true'][data-cc-expanded='true']
+  .cc-categories {
+  max-height: 32rem;
+  opacity: 1;
+}
+
+/* Label morphing for the morphing buttons. Each button renders both labels
+ * side-by-side — only one is visible based on banner expanded state. */
+.cc-btn-label[data-cc-label='expanded'],
+.cc-banner[data-cc-categories-on-banner='true'][data-cc-expanded='true']
+  .cc-btn-label[data-cc-label='collapsed'] {
+  display: none;
+}
+
+.cc-banner[data-cc-categories-on-banner='true'][data-cc-expanded='true']
+  .cc-btn-label[data-cc-label='expanded'] {
+  display: inline;
+}
+
+/* Ghost variant for the Customize / Hide preferences button — borderless,
+ * tertiary visual weight so the primary actions dominate. */
+.cc-btn-ghost {
+  background-color: transparent;
+  color: var(--cc-text-dim);
+  border-color: transparent;
+}
+
+.cc-btn-ghost:hover {
+  background-color: rgba(var(--cc-tint-rgb), 0.04);
+  color: var(--cc-text);
+}
+
+/* Reject-collapse — when the user expands and gains direct toggle control,
+ * "Reject optional" becomes redundant. Two-phase transition: fade + scale
+ * (180ms), then width/padding/border collapse via `transition-delay` so the
+ * gap closes only after the button is invisible (prototype lines 283–308). */
+.cc-banner[data-cc-categories-on-banner='true'] .cc-banner-reject {
+  opacity: 1;
+  transform: scale(1);
+  transform-origin: right center;
+  overflow: hidden;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.cc-banner[data-cc-categories-on-banner='true'][data-cc-expanded='true']
+  .cc-banner-reject {
+  opacity: 0;
+  transform: scale(0.92);
+  pointer-events: none;
+  width: 0;
+  padding: 0;
+  border-width: 0;
+  margin-left: -0.5rem; /* consume the .cc-banner-actions gap */
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease,
+    width 0s linear 0.18s,
+    padding 0s linear 0.18s,
+    margin 0s linear 0.18s,
+    border-width 0s linear 0.18s;
+}
+
+/* Reduced motion: instant expand/collapse, no fade-out delay on reject. */
+@media (prefers-reduced-motion: reduce) {
+  .cc-banner[data-cc-categories-on-banner='true'] .cc-categories,
+  .cc-banner[data-cc-categories-on-banner='true'] .cc-banner-reject {
+    transition: none !important;
+  }
+}
+
 /* ── Modal ──────────────────────────────────────────────── */
 
 .cc-overlay {

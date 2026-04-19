@@ -159,6 +159,23 @@ export interface ConsentBannerConfig {
    * @default false
    */
   scrim?: boolean;
+
+  /**
+   * Render category toggles directly inside the banner — a single-layer
+   * consent flow that eliminates the extra click into the modal. The banner
+   * starts collapsed and expands in place when the user clicks "Customize";
+   * primary/ghost button labels morph (Customize ↔ Hide preferences,
+   * Accept all ↔ Save preferences) and the "Reject optional" button fades
+   * away once expanded.
+   *
+   * Best paired with `cloud` or `popup` layouts (room for the expanded
+   * state) and ≤3 categories. When `true`, the preferences modal is not
+   * injected into the DOM; `astroConsent.showPreferences()` flips the
+   * banner into expanded mode instead.
+   *
+   * @default false
+   */
+  categoriesOnBanner?: boolean;
 }
 
 /** Visual/UI-level configuration for the consent banner and modal. */
@@ -206,6 +223,12 @@ export interface ConsentText<K extends string = string> {
   modalTitle?: string;
   closeAriaLabel?: string;
   savePreferences?: string;
+
+  // Single-layer banner (`ui.banner.categoriesOnBanner: true`)
+  /** Ghost button label when the banner is expanded. Default `"Hide preferences"`. */
+  hidePreferences?: string;
+  /** ARIA label on the banner's close (×) button. Default `"Dismiss"`. */
+  dismissAriaLabel?: string;
 
   // Essential category
   essentialLabel?: string;
