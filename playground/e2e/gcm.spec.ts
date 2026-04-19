@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { clearConsent } from './helpers';
+import { clearConsent, sel } from './helpers';
 
 /**
  * Collect every entry in `window.dataLayer`, normalizing the `arguments`-shaped
@@ -76,7 +76,7 @@ test.describe('Google Consent Mode v2', () => {
   });
 
   test('accept-all fires a granted update', async ({ page }) => {
-    await page.locator('[data-cc=accept-all]').click();
+    await page.locator(sel.acceptAll()).click();
 
     const entries = await readDataLayer(page);
     const updates = findConsentCalls(entries, 'update');
@@ -92,7 +92,7 @@ test.describe('Google Consent Mode v2', () => {
   });
 
   test('reject-all fires a denied update', async ({ page }) => {
-    await page.locator('[data-cc=reject-all]').click();
+    await page.locator(sel.rejectAll()).click();
 
     const entries = await readDataLayer(page);
     const updates = findConsentCalls(entries, 'update');
@@ -106,9 +106,9 @@ test.describe('Google Consent Mode v2', () => {
   });
 
   test('partial consent via modal grants analytics only', async ({ page }) => {
-    await page.locator('[data-cc=manage]').click();
-    await page.locator('label.cc-toggle:has([data-cc-category=analytics])').click();
-    await page.locator('[data-cc=save-preferences]').click();
+    await page.locator(sel.manage()).click();
+    await page.locator(sel.toggleLabel('analytics')).click();
+    await page.locator(sel.savePreferences()).click();
 
     const entries = await readDataLayer(page);
     const updates = findConsentCalls(entries, 'update');
@@ -122,7 +122,7 @@ test.describe('Google Consent Mode v2', () => {
   });
 
   test('existing consent triggers update on reload', async ({ page }) => {
-    await page.locator('[data-cc=accept-all]').click();
+    await page.locator(sel.acceptAll()).click();
     await page.reload();
 
     const entries = await readDataLayer(page);

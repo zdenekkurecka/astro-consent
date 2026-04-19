@@ -3,6 +3,18 @@ import Layout from '../layouts/Layout.astro';
 ---
 
 <Layout title="Cookie Consent Playground">
+  <style>
+    /* Layout.astro gives .controls button a solid white/pointer style that
+     * hides the browser's default disabled treatment — reinstate a muted
+     * look so invalid positions for the current layout read as unavailable. */
+    .controls button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    .controls button:disabled:hover {
+      background: white;
+    }
+  </style>
   <h1>Cookie Consent Playground</h1>
   <p>
     This page demonstrates the <code>@zdenekkurecka/astro-consent</code> integration.
@@ -27,8 +39,61 @@ import Layout from '../layouts/Layout.astro';
     <button id="btn-get">Get State</button>
   </div>
 
+  <h2>Banner Layout</h2>
+  <p>
+    Live-swap the banner variant. Also drivable from the URL via
+    <code>?layout=box&amp;position=bottom-right&amp;scrim=true</code> —
+    page reloads pick up those params via the harness.
+  </p>
+  <div class="controls" data-cc-picker="layout">
+    <button data-val="bar">bar</button>
+    <button data-val="box">box</button>
+    <button data-val="cloud">cloud</button>
+    <button data-val="popup">popup</button>
+  </div>
+  <div class="controls" data-cc-picker="position">
+    <button data-val="top">top</button>
+    <button data-val="bottom">bottom</button>
+    <button data-val="top-left">top-left</button>
+    <button data-val="top-right">top-right</button>
+    <button data-val="bottom-left">bottom-left</button>
+    <button data-val="bottom-right">bottom-right</button>
+    <button data-val="center">center</button>
+  </div>
+  <div class="controls" data-cc-picker="scrim">
+    <button data-val="toggle">toggle scrim</button>
+  </div>
+  <div class="controls" data-cc-picker="categories-on-banner">
+    <button data-val="toggle">toggle categories on banner</button>
+  </div>
+
   <h2>Current State</h2>
   <pre id="state">No consent data yet.</pre>
+
+  <script is:inline>
+    // Harness hook (#80): echo URL params onto <html data-cc-test-*> so
+    // Playwright fixtures (see `playground/e2e/helpers.ts` → `openBanner`)
+    // can parameterize the page without a build rebuild. Params currently
+    // recognized: layout, position, scrim, categoriesOnBanner, showCounter,
+    // equalWeight.
+    (function () {
+      const params = new URLSearchParams(window.location.search);
+      const known = [
+        'layout',
+        'position',
+        'scrim',
+        'categoriesOnBanner',
+        'showCounter',
+        'equalWeight',
+      ];
+      for (const key of known) {
+        const value = params.get(key);
+        if (value === null) continue;
+        const attr = 'data-cc-test-' + key.replace(/([A-Z])/g, '-$1').toLowerCase();
+        document.documentElement.setAttribute(attr, value);
+      }
+    })();
+  </script>
 
   <script>
     function refreshState() {
@@ -52,8 +117,80 @@ import Layout from '../layouts/Layout.astro';
       refreshState();
     });
 
+    // Live picker — mutates the banner's data-cc-* attributes and the scrim
+    // element so reviewers can eyeball every layout/position combination
+    // without a reload. Validation mirrors the server-side resolver.
+    const VALID_POSITIONS = {
+      bar: ['bottom', 'top'],
+      box: ['bottom-right', 'bottom-left', 'top-right', 'top-left'],
+      cloud: ['bottom', 'top'],
+      popup: ['center'],
+    };
+    const DEFAULT_POSITION = {
+      bar: 'bottom',
+      box: 'bottom-right',
+      cloud: 'bottom',
+      popup: 'center',
+    };
+
+    function refreshPositionButtons(layout) {
+      const valid = VALID_POSITIONS[layout] || [];
+      document
+        .querySelectorAll('[data-cc-picker="position"] button')
+        .forEach((btn) => {
+          const val = btn.getAttribute('data-val');
+          btn.disabled = !valid.includes(val);
+        });
+    }
+
+    function applyBannerVariant(layout, position, scrim) {
+      const banner = document.getElementById('cc-banner');
+      if (!banner) return;
+      if (layout) {
+        banner.setAttribute('data-cc-layout', layout);
+        // Popup forces scrim on; bar/box force it off; cloud is a passthrough.
+        if (layout === 'popup') scrim = true;
+        if (layout === 'bar' || layout === 'box') scrim = false;
+      }
+      const effectiveLayout = layout || banner.getAttribute('data-cc-layout') || 'bar';
+      let effectivePosition = position || banner.getAttribute('data-cc-position');
+      if (!VALID_POSITIONS[effectiveLayout].includes(effectivePosition)) {
+        effectivePosition = DEFAULT_POSITION[effectiveLayout];
+      }
+      banner.setAttribute('data-cc-position', effectivePosition);
+      refreshPositionButtons(effectiveLayout);
+
+      // Manage the scrim element — create / destroy as needed so it matches
+      // whatever the banner currently wants.
+      const currentScrim = document.getElementById('cc-banner-scrim');
+      const wantScrim =
+        scrim === undefined ? banner.getAttribute('data-cc-scrim') === 'true' : scrim;
+      banner.setAttribute('data-cc-scrim', wantScrim ? 'true' : 'false');
+      if (wantScrim && !currentScrim) {
+        const s = document.createElement('div');
+        s.className = 'cc-banner-scrim cc-visible';
+        s.id = 'cc-banner-scrim';
+        s.setAttribute('data-testid', 'cc-banner-scrim');
+        s.setAttribute('aria-hidden', 'true');
+        banner.parentElement?.insertBefore(s, banner);
+      } else if (!wantScrim && currentScrim) {
+        currentScrim.remove();
+      }
+    }
+
     document.addEventListener('astro:page-load', () => {
       refreshState();
+
+      // Mirror the banner's current layout onto the position picker so
+      // invalid buttons are greyed out from first paint. The banner may
+      // mount a tick after page-load, so poll briefly.
+      const initialLayout = () => {
+        const banner = document.getElementById('cc-banner');
+        const layout = banner?.getAttribute('data-cc-layout') || 'bar';
+        refreshPositionButtons(layout);
+      };
+      if (document.getElementById('cc-banner')) initialLayout();
+      else requestAnimationFrame(initialLayout);
 
       document.getElementById('btn-show')?.addEventListener('click', () => {
         window.astroConsent?.show();
@@ -71,6 +208,42 @@ import Layout from '../layouts/Layout.astro';
       document.getElementById('btn-get')?.addEventListener('click', () => {
         refreshState();
       });
+
+      document
+        .querySelector('[data-cc-picker="layout"]')
+        ?.addEventListener('click', (e) => {
+          const btn = e.target instanceof HTMLElement ? e.target.closest('button') : null;
+          const val = btn?.getAttribute('data-val');
+          if (val) applyBannerVariant(val);
+        });
+      document
+        .querySelector('[data-cc-picker="position"]')
+        ?.addEventListener('click', (e) => {
+          const btn = e.target instanceof HTMLElement ? e.target.closest('button') : null;
+          const val = btn?.getAttribute('data-val');
+          if (val) applyBannerVariant(undefined, val);
+        });
+      document
+        .querySelector('[data-cc-picker="scrim"]')
+        ?.addEventListener('click', () => {
+          const banner = document.getElementById('cc-banner');
+          const current = banner?.getAttribute('data-cc-scrim') === 'true';
+          applyBannerVariant(undefined, undefined, !current);
+        });
+
+      // categoriesOnBanner is resolved at injectUI time and changes the
+      // banner's structure (categories markup, dismiss button, label
+      // morphing), so we can't toggle it live — flip the URL param and let
+      // the page reload re-inject the banner with the new shape.
+      document
+        .querySelector('[data-cc-picker="categories-on-banner"]')
+        ?.addEventListener('click', () => {
+          const url = new URL(window.location.href);
+          const current = url.searchParams.get('categoriesOnBanner') === 'true';
+          if (current) url.searchParams.delete('categoriesOnBanner');
+          else url.searchParams.set('categoriesOnBanner', 'true');
+          window.location.href = url.toString();
+        });
     });
   </script>
 </Layout>

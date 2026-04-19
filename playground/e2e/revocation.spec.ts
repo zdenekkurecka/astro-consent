@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { clearConsent } from './helpers';
+import { clearConsent, sel } from './helpers';
 
 test.describe('Revocation of a previously-granted category', () => {
   test.beforeEach(async ({ page }) => {
@@ -9,7 +9,7 @@ test.describe('Revocation of a previously-granted category', () => {
   });
 
   test('activated script tag remains on revoke; fresh load stays inert', async ({ page }) => {
-    await page.locator('[data-cc=accept-all]').click();
+    await page.locator(sel.acceptAll()).click();
 
     await expect(page.locator('#inline-marker')).toHaveAttribute('data-loaded', 'true');
     expect(await page.evaluate(() => (window as any).__ccInlineLoaded)).toBe(true);
@@ -21,8 +21,8 @@ test.describe('Revocation of a previously-granted category', () => {
     expect(activatedCountBefore).toBeGreaterThan(0);
 
     await page.evaluate(() => window.astroConsent?.showPreferences());
-    await page.locator('label.cc-toggle:has([data-cc-category=analytics])').click();
-    await page.locator('[data-cc=save-preferences]').click();
+    await page.locator(sel.toggleLabel('analytics')).click();
+    await page.locator(sel.savePreferences()).click();
 
     const stateAfterRevoke = await page.evaluate(() => window.astroConsent?.get());
     expect(stateAfterRevoke?.categories.analytics).toBe(false);
@@ -32,7 +32,7 @@ test.describe('Revocation of a previously-granted category', () => {
 
     await page.reload();
 
-    await expect(page.locator('#cc-banner')).not.toHaveClass(/cc-visible/);
+    await expect(page.locator(sel.banner())).not.toHaveClass(/cc-visible/);
 
     expect(await page.evaluate(() => (window as any).__ccInlineLoaded)).toBeUndefined();
     await expect(page.locator('#inline-marker')).toHaveAttribute('data-loaded', 'false');

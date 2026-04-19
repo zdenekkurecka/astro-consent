@@ -114,6 +114,70 @@ export interface CookiePolicyLink {
 /** Color mode for the consent UI. */
 export type ConsentColorMode = 'auto' | 'light' | 'dark';
 
+/**
+ * Banner layout variant.
+ *
+ * - `"bar"` — full-width strip anchored to the top or bottom (default).
+ * - `"box"` — compact card floating in a viewport corner.
+ * - `"cloud"` — padded floating card anchored to top or bottom, with margins.
+ * - `"popup"` — centered modal with a scrim; demands interaction.
+ */
+export type BannerLayout = 'bar' | 'box' | 'cloud' | 'popup';
+
+/** Banner position on the viewport. Not all positions are valid for all layouts. */
+export type BannerPosition =
+  | 'top'
+  | 'bottom'
+  | 'top-left'
+  | 'top-right'
+  | 'bottom-left'
+  | 'bottom-right'
+  | 'center';
+
+/**
+ * Banner layout + placement configuration.
+ *
+ * Position validity per layout:
+ * - `bar`   — `top`, `bottom` (default `bottom`)
+ * - `box`   — `top-left`, `top-right`, `bottom-left`, `bottom-right` (default `bottom-right`)
+ * - `cloud` — `top`, `bottom` (default `bottom`)
+ * - `popup` — `center` (only)
+ *
+ * Invalid combinations fall back to the layout's default and emit a
+ * `console.warn` in dev.
+ */
+export interface ConsentBannerConfig {
+  /** Layout variant. @default "bar" */
+  layout?: BannerLayout;
+  /** Viewport position. Defaults vary per layout — see above. */
+  position?: BannerPosition;
+  /**
+   * Render a dimming scrim behind the banner. Forced on for `popup` (the
+   * scrim is the layout's premise), forced off for `bar` and `box`, opt-in
+   * for `cloud`.
+   *
+   * @default false
+   */
+  scrim?: boolean;
+
+  /**
+   * Render category toggles directly inside the banner — a single-layer
+   * consent flow that eliminates the extra click into the modal. The banner
+   * starts collapsed and expands in place when the user clicks "Customize";
+   * primary/ghost button labels morph (Customize ↔ Hide preferences,
+   * Accept all ↔ Save preferences) and the "Reject optional" button fades
+   * away once expanded.
+   *
+   * Best paired with `cloud` or `popup` layouts (room for the expanded
+   * state) and ≤3 categories. When `true`, the preferences modal is not
+   * injected into the DOM; `astroConsent.showPreferences()` flips the
+   * banner into expanded mode instead.
+   *
+   * @default false
+   */
+  categoriesOnBanner?: boolean;
+}
+
 /** Visual/UI-level configuration for the consent banner and modal. */
 export interface ConsentUIConfig {
   /**
@@ -127,6 +191,9 @@ export interface ConsentUIConfig {
    * @default "auto"
    */
   colorMode?: ConsentColorMode;
+
+  /** Banner layout + placement. Omit for the default bottom bar. */
+  banner?: ConsentBannerConfig;
 }
 
 /** Per-category label/description override used in `ConsentText.categories`. */
@@ -157,10 +224,26 @@ export interface ConsentText<K extends string = string> {
   closeAriaLabel?: string;
   savePreferences?: string;
 
+  // Single-layer banner (`ui.banner.categoriesOnBanner: true`)
+  /** Ghost button label when the banner is expanded. Default `"Hide preferences"`. */
+  hidePreferences?: string;
+  /** ARIA label on the banner's close (×) button. Default `"Dismiss"`. */
+  dismissAriaLabel?: string;
+
   // Essential category
   essentialLabel?: string;
   essentialDescription?: string;
+  /**
+   * @deprecated Use `badgeRequired` instead. When both are provided,
+   * `badgeRequired` wins. Kept as a fallback so existing configs keep working.
+   */
   essentialBadge?: string;
+
+  // Category badges
+  /** Badge text on the required (essential) category. Default `"Required"`. */
+  badgeRequired?: string;
+  /** Badge text on optional categories. Default `"Optional"`. */
+  badgeOptional?: string;
 
   /** Per-category label/description overrides, keyed by category key. */
   categories?: Partial<Record<K, ConsentCategoryText>>;

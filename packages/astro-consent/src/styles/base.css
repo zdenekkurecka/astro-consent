@@ -1,37 +1,85 @@
 /* @zdenekkurecka/astro-consent — base styles */
 
-/* ── Custom property defaults (zero specificity via :where) ── */
+/* ── Custom property defaults (zero specificity via :where) ──
+ *
+ * Three inputs drive the palette: --cc-primary (accent), --cc-tone (neutral
+ * base — paper in light, ink in dark), and --cc-text (body foreground). Every
+ * other colour token is derived via color-mix() so overriding any one input
+ * re-tints the whole card. Derived tokens remain declared so power users can
+ * still override them individually.
+ *
+ * color-mix() is Baseline-widely-available (Chrome 111 / Safari 16.2 /
+ * Firefox 113, mid-2023). Older browsers fall through to the declared
+ * expression as an invalid value and inherit the initial — the card still
+ * paints, it just stops re-deriving when a single input is overridden.
+ */
 
 :where(:root) {
+  /* ── Inputs ── */
   --cc-primary: #2563eb;
-  --cc-primary-hover: #1d4ed8;
-  --cc-bg: #ffffff;
-  --cc-surface: #f8fafc;
+  --cc-tone:    #ffffff;
+  --cc-text:    #0f172a;
+
+  /* ── Derived accent ── */
+  --cc-primary-hover: color-mix(in oklab, var(--cc-primary) 85%, var(--cc-text));
+  --cc-accent-ink:    #ffffff;
+  --cc-aura-1: color-mix(in srgb, var(--cc-primary) 16%, transparent);
+  --cc-aura-2: color-mix(in srgb, var(--cc-primary)  6%, transparent);
+
+  /* ── Derived surfaces ── */
+  --cc-bg:        var(--cc-tone);
+  --cc-surface:   color-mix(in oklab, var(--cc-tone) 94%, var(--cc-text));
+  --cc-surface-2: color-mix(in oklab, var(--cc-surface) 90%, transparent);
+  --cc-surface-3: color-mix(in oklab, var(--cc-tone)   95%, transparent);
+
+  /* ── Derived strokes / text steps ── */
+  --cc-border:     color-mix(in oklab, var(--cc-text) 12%, var(--cc-tone));
+  --cc-stroke-2:   color-mix(in oklab, var(--cc-text) 25%, var(--cc-tone));
+  --cc-text-muted: color-mix(in oklab, var(--cc-text) 58%, var(--cc-tone));
+  --cc-text-dim:   color-mix(in oklab, var(--cc-text) 80%, var(--cc-tone));
+  --cc-text-mute:  color-mix(in oklab, var(--cc-text) 42%, var(--cc-tone));
+
+  /* ── Non-derivable / geometry ── */
   --cc-tint-rgb: 0, 0, 0;
-  --cc-text: #0f172a;
-  --cc-text-muted: #64748b;
-  --cc-border: #e2e8f0;
   --cc-radius: 1.5rem;
+  --cc-radius-sm: 0.5rem;
+  --cc-radius-xs: 0.25rem;
   --cc-radius-pill: 9999px;
+  --cc-shadow-card:
+    inset 0 1px 0 #ffffff14,
+    0 24px 64px #0f172a26,
+    0 4px 16px #0f172a1a;
   --cc-font-family: inherit;
+
+  /* ── Banner layout geometry ──
+   * Shared across `bar`, `box`, `cloud`, `popup` variants. Override these to
+   * tune widths or viewport gutters without re-writing per-variant selectors.
+   */
+  --cc-banner-max-width: 72rem;   /* bar / cloud content cap */
+  --cc-box-width: 26rem;          /* box variant target width (≈ 420px) */
+  --cc-popup-width: 30rem;        /* popup variant target width (≈ 480px) */
+  --cc-banner-offset: 1rem;       /* gap from viewport edges for box / cloud */
 }
 
 /* ── Dark mode defaults (prefers-color-scheme) ──────────────
- * Zero specificity via :where() so any user override in their
- * own stylesheet wins without !important.
+ * Swapping the three inputs re-derives surfaces, strokes, and text steps
+ * automatically. --cc-tint-rgb and --cc-shadow-card can't be derived from
+ * a single input, so they stay explicit.
  * WCAG 2.1 AA: text on --cc-bg and --cc-text-muted on --cc-bg
  * both clear 4.5:1 contrast.
  */
 @media (prefers-color-scheme: dark) {
   :where(:root) {
     --cc-primary: #3b82f6;
-    --cc-primary-hover: #60a5fa;
-    --cc-bg: #1e293b;
-    --cc-surface: #334155;
+    /* Warm near-black neutral (stone palette) matching the v0.4 prototype;
+     * blue stays as the accent hue only, so the card no longer reads slate. */
+    --cc-tone: #1c1917;
+    --cc-text: #fafaf9;
     --cc-tint-rgb: 255, 255, 255;
-    --cc-text: #f1f5f9;
-    --cc-text-muted: #94a3b8;
-    --cc-border: #475569;
+    --cc-shadow-card:
+      inset 0 1px 0 #ffffff0f,
+      0 24px 64px #00000080,
+      0 4px 16px #0000004d;
   }
 }
 
@@ -44,39 +92,47 @@
  */
 :where([data-cc-theme='light']) {
   --cc-primary: #2563eb;
-  --cc-primary-hover: #1d4ed8;
-  --cc-bg: #ffffff;
-  --cc-surface: #f8fafc;
-  --cc-tint-rgb: 0, 0, 0;
+  --cc-tone: #ffffff;
   --cc-text: #0f172a;
-  --cc-text-muted: #64748b;
-  --cc-border: #e2e8f0;
+  --cc-tint-rgb: 0, 0, 0;
+  --cc-shadow-card:
+    inset 0 1px 0 #ffffff14,
+    0 24px 64px #0f172a26,
+    0 4px 16px #0f172a1a;
 }
 
 :where([data-cc-theme='dark']) {
   --cc-primary: #3b82f6;
-  --cc-primary-hover: #60a5fa;
-  --cc-bg: #1e293b;
-  --cc-surface: #334155;
+  --cc-tone: #1c1917;
+  --cc-text: #fafaf9;
   --cc-tint-rgb: 255, 255, 255;
-  --cc-text: #f1f5f9;
-  --cc-text-muted: #94a3b8;
-  --cc-border: #475569;
+  --cc-shadow-card:
+    inset 0 1px 0 #ffffff0f,
+    0 24px 64px #00000080,
+    0 4px 16px #0000004d;
 }
 
 /* ── Banner ─────────────────────────────────────────────── */
 
+/*
+ * The banner is a single element whose layout (`bar`, `box`, `cloud`, `popup`)
+ * and position (`top`, `bottom`, `bottom-right`, …) are selected via data
+ * attributes set by `createBannerHTML()`. Base rules here cover the shared
+ * appearance — surface, typography, transition — and per-layout blocks below
+ * handle positioning, width, and edge treatment.
+ */
 .cc-banner {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
   z-index: 9999;
-  background-color: var(--cc-bg);
-  border-top: 1px solid var(--cc-border);
+  background:
+    radial-gradient(120% 70% at 90% 0%, var(--cc-aura-1) 0%, transparent 55%),
+    radial-gradient(100% 80% at 10% 100%, var(--cc-aura-2) 0%, transparent 60%),
+    linear-gradient(180deg, var(--cc-surface-2), var(--cc-surface-3));
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  box-shadow: var(--cc-shadow-card);
   font-family: var(--cc-font-family);
   color: var(--cc-text);
-  transform: translateY(100%);
   opacity: 0;
   transition: transform 0.3s ease, opacity 0.3s ease;
   pointer-events: none;
@@ -84,13 +140,12 @@
 }
 
 .cc-banner.cc-visible {
-  transform: translateY(0);
   opacity: 1;
   pointer-events: auto;
 }
 
 .cc-banner-inner {
-  max-width: 72rem;
+  max-width: var(--cc-banner-max-width);
   margin: 0 auto;
   padding: 1rem 1.5rem;
   display: flex;
@@ -114,6 +169,271 @@
   gap: 0.5rem;
   flex-shrink: 0;
   flex-wrap: wrap;
+}
+
+/* ── Banner scrim ───────────────────────────────────────────
+ * Rendered only when `data-cc-scrim="true"` on the banner (popup always;
+ * cloud when `ui.banner.scrim: true`). Click-inert by design — consent
+ * requires an explicit choice, so clicking the scrim does nothing.
+ */
+.cc-banner-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  background-color: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.cc-banner-scrim.cc-visible {
+  opacity: 1;
+  /* Intentionally no pointer-events: auto — scrim is a visual dimmer only. */
+}
+
+/* ── Layout: bar ─── full-width strip, edge to edge ─── */
+.cc-banner[data-cc-layout='bar'] {
+  left: 0;
+  right: 0;
+}
+.cc-banner[data-cc-layout='bar'][data-cc-position='bottom'] {
+  bottom: 0;
+  border-top: 1px solid var(--cc-stroke-2);
+  transform: translateY(100%);
+}
+.cc-banner[data-cc-layout='bar'][data-cc-position='top'] {
+  top: 0;
+  border-bottom: 1px solid var(--cc-stroke-2);
+  transform: translateY(-100%);
+}
+.cc-banner[data-cc-layout='bar'].cc-visible {
+  transform: translateY(0);
+}
+
+/* ── Layout: box ─── compact corner card ─── */
+.cc-banner[data-cc-layout='box'] {
+  width: min(var(--cc-box-width), calc(100vw - var(--cc-banner-offset) * 2));
+  border: 1px solid var(--cc-stroke-2);
+  border-radius: var(--cc-radius);
+  overflow: hidden;
+  transform: translateY(24px);
+}
+.cc-banner[data-cc-layout='box'][data-cc-position='bottom-right'] {
+  bottom: var(--cc-banner-offset);
+  right: var(--cc-banner-offset);
+}
+.cc-banner[data-cc-layout='box'][data-cc-position='bottom-left'] {
+  bottom: var(--cc-banner-offset);
+  left: var(--cc-banner-offset);
+}
+.cc-banner[data-cc-layout='box'][data-cc-position='top-right'] {
+  top: var(--cc-banner-offset);
+  right: var(--cc-banner-offset);
+  transform: translateY(-24px);
+}
+.cc-banner[data-cc-layout='box'][data-cc-position='top-left'] {
+  top: var(--cc-banner-offset);
+  left: var(--cc-banner-offset);
+  transform: translateY(-24px);
+}
+.cc-banner[data-cc-layout='box'].cc-visible {
+  transform: translateY(0);
+}
+.cc-banner[data-cc-layout='box'] .cc-banner-inner {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+.cc-banner[data-cc-layout='box'] .cc-banner-actions {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.cc-banner[data-cc-layout='box'] .cc-banner-actions > :nth-child(3) {
+  grid-column: 1 / -1;
+}
+
+/* ── Layout: cloud ─── floating padded strip ─── */
+.cc-banner[data-cc-layout='cloud'] {
+  left: var(--cc-banner-offset);
+  right: var(--cc-banner-offset);
+  border: 1px solid var(--cc-stroke-2);
+  border-radius: var(--cc-radius);
+  overflow: hidden;
+}
+.cc-banner[data-cc-layout='cloud'][data-cc-position='bottom'] {
+  bottom: var(--cc-banner-offset);
+  transform: translateY(calc(100% + var(--cc-banner-offset)));
+}
+.cc-banner[data-cc-layout='cloud'][data-cc-position='top'] {
+  top: var(--cc-banner-offset);
+  transform: translateY(calc(-100% - var(--cc-banner-offset)));
+}
+.cc-banner[data-cc-layout='cloud'].cc-visible {
+  transform: translateY(0);
+}
+
+/* ── Layout: popup ─── centered modal card ─── */
+.cc-banner[data-cc-layout='popup'] {
+  top: 50%;
+  left: 50%;
+  width: min(var(--cc-popup-width), calc(100vw - var(--cc-banner-offset) * 2));
+  max-height: calc(100vh - var(--cc-banner-offset) * 2);
+  overflow-y: auto;
+  border: 1px solid var(--cc-stroke-2);
+  border-radius: var(--cc-radius);
+  transform: translate(-50%, -50%) scale(0.96);
+}
+.cc-banner[data-cc-layout='popup'].cc-visible {
+  transform: translate(-50%, -50%) scale(1);
+}
+.cc-banner[data-cc-layout='popup'] .cc-banner-inner {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1rem;
+  padding: 1.5rem;
+}
+.cc-banner[data-cc-layout='popup'] .cc-banner-actions {
+  justify-content: center;
+}
+
+/* ── Single-layer banner (categoriesOnBanner) ───────────────
+ *
+ * When `ui.banner.categoriesOnBanner: true`, the banner renders the
+ * category toggles inline and starts collapsed. Clicking "Customize"
+ * sets `data-cc-expanded="true"` on the banner, which:
+ *   • slides the `.cc-categories` block in via max-height + opacity,
+ *   • swaps the morphing button labels (Customize ↔ Hide preferences,
+ *     Accept all ↔ Save preferences) via `[data-cc-label]`,
+ *   • fades and collapses the "Reject optional" button to zero width.
+ *
+ * The single-layer banner forces a column layout in `.cc-banner-inner`
+ * across every variant — categories never sit beside the text.
+ */
+
+.cc-banner[data-cc-categories-on-banner='true'] {
+  position: fixed;
+}
+
+.cc-banner[data-cc-categories-on-banner='true'] .cc-banner-inner {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1rem;
+}
+
+.cc-banner-close {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: var(--cc-radius-sm);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--cc-text-mute);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  z-index: 1;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.cc-banner-close:hover {
+  background-color: rgba(var(--cc-tint-rgb), 0.06);
+  color: var(--cc-text);
+  border-color: var(--cc-border);
+}
+
+.cc-banner-close:focus-visible {
+  outline: 2px solid var(--cc-primary);
+  outline-offset: 2px;
+}
+
+/* Categories container — collapsed by default; expands on
+ * `data-cc-expanded="true"`. Animating max-height is approximate but cheap;
+ * 32rem is well above the typical 3-category footprint. */
+.cc-banner[data-cc-categories-on-banner='true'] .cc-categories {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  margin: 0;
+  padding: 0;
+  transition: max-height 0.35s ease, opacity 0.25s ease, margin 0.25s ease;
+}
+
+.cc-banner[data-cc-categories-on-banner='true'][data-cc-expanded='true']
+  .cc-categories {
+  max-height: 32rem;
+  opacity: 1;
+}
+
+/* Label morphing for the morphing buttons. Each button renders both labels
+ * side-by-side — only one is visible based on banner expanded state. */
+.cc-btn-label[data-cc-label='expanded'],
+.cc-banner[data-cc-categories-on-banner='true'][data-cc-expanded='true']
+  .cc-btn-label[data-cc-label='collapsed'] {
+  display: none;
+}
+
+.cc-banner[data-cc-categories-on-banner='true'][data-cc-expanded='true']
+  .cc-btn-label[data-cc-label='expanded'] {
+  display: inline;
+}
+
+/* Ghost variant for the Customize / Hide preferences button — borderless,
+ * tertiary visual weight so the primary actions dominate. */
+.cc-btn-ghost {
+  background-color: transparent;
+  color: var(--cc-text-dim);
+  border-color: transparent;
+}
+
+.cc-btn-ghost:hover {
+  background-color: rgba(var(--cc-tint-rgb), 0.04);
+  color: var(--cc-text);
+}
+
+/* Reject-collapse — when the user expands and gains direct toggle control,
+ * "Reject optional" becomes redundant. Two-phase transition: fade + scale
+ * (180ms), then width/padding/border collapse via `transition-delay` so the
+ * gap closes only after the button is invisible (prototype lines 283–308). */
+.cc-banner[data-cc-categories-on-banner='true'] .cc-banner-reject {
+  opacity: 1;
+  transform: scale(1);
+  transform-origin: right center;
+  overflow: hidden;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.cc-banner[data-cc-categories-on-banner='true'][data-cc-expanded='true']
+  .cc-banner-reject {
+  opacity: 0;
+  transform: scale(0.92);
+  pointer-events: none;
+  width: 0;
+  padding: 0;
+  border-width: 0;
+  margin-left: -0.5rem; /* consume the .cc-banner-actions gap */
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease,
+    width 0s linear 0.18s,
+    padding 0s linear 0.18s,
+    margin 0s linear 0.18s,
+    border-width 0s linear 0.18s;
+}
+
+/* Reduced motion: instant expand/collapse, no fade-out delay on reject. */
+@media (prefers-reduced-motion: reduce) {
+  .cc-banner[data-cc-categories-on-banner='true'] .cc-categories,
+  .cc-banner[data-cc-categories-on-banner='true'] .cc-banner-reject {
+    transition: none !important;
+  }
 }
 
 /* ── Modal ──────────────────────────────────────────────── */
@@ -155,14 +475,20 @@
 }
 
 .cc-modal-inner {
-  background-color: var(--cc-bg);
+  background:
+    radial-gradient(120% 70% at 90% 0%, var(--cc-aura-1) 0%, transparent 55%),
+    radial-gradient(100% 80% at 10% 100%, var(--cc-aura-2) 0%, transparent 60%),
+    linear-gradient(180deg, var(--cc-surface-2), var(--cc-surface-3));
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  border: 1px solid var(--cc-stroke-2);
   border-radius: var(--cc-radius);
   width: 100%;
   max-width: 32rem;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--cc-shadow-card);
   box-sizing: border-box;
 }
 
@@ -250,13 +576,22 @@
 }
 
 .cc-badge {
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
   font-weight: 500;
-  color: var(--cc-text-muted);
-  border: 1px solid var(--cc-border);
-  border-radius: var(--cc-radius-pill);
-  padding: 0.125rem 0.5rem;
-  line-height: 1.5;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cc-text-mute);
+  background-color: rgba(var(--cc-tint-rgb), 0.06);
+  border-radius: var(--cc-radius-xs);
+  padding: 0.25rem 0.5rem;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+}
+
+.cc-badge--required {
+  color: var(--cc-primary);
+  background-color: color-mix(in srgb, var(--cc-primary) 12%, transparent);
 }
 
 .cc-category-description {
@@ -266,56 +601,57 @@
   color: var(--cc-text-muted);
 }
 
-/* ── Toggle Switch ──────────────────────────────────────── */
+/* ── Switch ─────────────────────────────────────────────
+ * Custom [role="switch"] control, 44×24 track with a 16×16 thumb and a 4px
+ * inset on both sides. State is driven by `aria-checked`; keyboard wiring
+ * (Space/Enter) and click toggling live in `client.ts`.
+ */
 
-.cc-toggle {
+.cc-switch {
   position: relative;
-  display: inline-block;
   width: 2.75rem;
   height: 1.5rem;
   flex-shrink: 0;
-}
-
-.cc-toggle input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-  position: absolute;
-}
-
-.cc-toggle-slider {
-  position: absolute;
-  inset: 0;
-  background-color: var(--cc-border);
   border-radius: var(--cc-radius-pill);
+  background-color: var(--cc-border);
+  box-shadow: inset 0 0 0 1px var(--cc-stroke-2);
   cursor: pointer;
-  transition: background-color 0.2s ease;
-}
-
-.cc-toggle-slider::before {
-  content: '';
-  position: absolute;
-  height: 1.125rem;
-  width: 1.125rem;
-  left: 0.1875rem;
-  bottom: 0.1875rem;
-  background-color: white;
-  border-radius: 50%;
-  transition: transform 0.2s ease;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
   box-sizing: border-box;
 }
 
-.cc-toggle input:checked + .cc-toggle-slider {
+.cc-switch::after {
+  content: '';
+  position: absolute;
+  top: 0.25rem;
+  left: 0.25rem;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  background-color: #ffffff;
+  box-shadow: 0 1px 2px #0000004d, 0 2px 4px #00000033;
+  transition: transform 0.2s cubic-bezier(0.5, 0.1, 0.3, 1.4);
+  will-change: transform;
+}
+
+.cc-switch[aria-checked='true'] {
   background-color: var(--cc-primary);
+  box-shadow: inset 0 0 0 1px var(--cc-primary);
 }
 
-.cc-toggle input:checked + .cc-toggle-slider::before {
+.cc-switch[aria-checked='true']::after {
   transform: translateX(1.25rem);
+  background-color: var(--cc-accent-ink);
 }
 
-.cc-toggle input:disabled + .cc-toggle-slider {
-  opacity: 0.6;
+.cc-switch[data-locked='true'] {
+  opacity: 0.7;
   cursor: not-allowed;
+}
+
+.cc-switch:focus-visible {
+  outline: 2px solid var(--cc-primary);
+  outline-offset: 4px;
 }
 
 /* ── Buttons ────────────────────────────────────────────── */
@@ -329,7 +665,7 @@
   font-weight: 500;
   font-family: var(--cc-font-family);
   line-height: 1.5;
-  border-radius: var(--cc-radius-pill);
+  border-radius: var(--cc-radius-sm);
   border: 1px solid transparent;
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
@@ -384,6 +720,11 @@
 .cc-modal-policy-link {
   margin: 0;
   color: var(--cc-text-muted);
+  /* System monospace stack — no custom web font shipped with the library, so
+   * we lean on the OS defaults (SF Mono on macOS, Consolas on Windows, etc.). */
+  font-family: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
 }
 
 .cc-modal-policy-link:hover {
@@ -394,10 +735,26 @@
 
 .cc-btn:focus-visible,
 .cc-modal-close:focus-visible,
-.cc-policy-link:focus-visible,
-.cc-toggle input:focus-visible + .cc-toggle-slider {
+.cc-policy-link:focus-visible {
   outline: 2px solid var(--cc-primary);
   outline-offset: 2px;
+}
+
+/* ── Reduced motion ─────────────────────────────────────
+ * Strips the surface fade/slide and the switch thumb animation so users
+ * with `prefers-reduced-motion: reduce` don't see the added motion.
+ */
+
+@media (prefers-reduced-motion: reduce) {
+  .cc-banner,
+  .cc-overlay,
+  .cc-modal,
+  .cc-modal-close,
+  .cc-switch,
+  .cc-switch::after {
+    transition: none !important;
+    animation: none !important;
+  }
 }
 
 /* ── Mobile (≤ 480px) ───────────────────────────────────── */
