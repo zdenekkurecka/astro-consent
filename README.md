@@ -28,6 +28,7 @@
   - [Recipes (GA4, GTM, Meta Pixel)](#recipes-ga4-gtm-meta-pixel)
   - [Re-prompt users after changing categories](#re-prompt-users-after-changing-categories)
   - [Customise banner & modal text (and localize it)](#customise-banner--modal-text-and-localize-it)
+  - [Choose a banner layout](#choose-a-banner-layout)
   - [Theme the UI](#theme-the-ui)
   - [Use with a strict Content Security Policy](#use-with-a-strict-content-security-policy)
   - [Debug mode](#debug-mode)
@@ -211,6 +212,41 @@ interface ConsentConfig {
    * @default false
    */
   debug?: boolean;
+
+  /** Visual / placement configuration for the banner and modal. */
+  ui?: {
+    /**
+     * Forces the consent UI into `"light"` / `"dark"` by setting
+     * `data-cc-theme` on `:root`. `"auto"` (default) follows
+     * `prefers-color-scheme`.
+     */
+    colorMode?: 'auto' | 'light' | 'dark';
+    /**
+     * Banner layout and placement. See
+     * [Choose a banner layout](#choose-a-banner-layout) for the visuals and
+     * valid position-per-layout combinations.
+     */
+    banner?: {
+      /** @default "bar" */
+      layout?: 'bar' | 'box' | 'cloud' | 'popup';
+      /** Defaults vary per layout — `bottom` for `bar`/`cloud`, `bottom-right` for `box`, `center` for `popup`. */
+      position?:
+        | 'top'
+        | 'bottom'
+        | 'top-left'
+        | 'top-right'
+        | 'bottom-left'
+        | 'bottom-right'
+        | 'center';
+      /**
+       * Dim the page behind the banner. Passthrough for `cloud`; forced on
+       * for `popup`; forced off for `bar` and `box`.
+       *
+       * @default false
+       */
+      scrim?: boolean;
+    };
+  };
 
   /**
    * Single-language text overrides for the banner and modal. Any field
@@ -727,6 +763,136 @@ to their initial — the card still paints, it just won't re-derive when only
 `--cc-primary` or `--cc-tone` is overridden. If you need to support legacy
 browsers, either override each token explicitly (using the defaults above as
 a starting point), or inline `color-mix()` at build time with PostCSS.
+
+### Choose a banner layout
+
+Four banner layouts ship out of the box. The default is `bar` + `bottom` — a
+full-width strip along the viewport edge, exactly what earlier versions of the
+integration rendered. Swap it via `ui.banner`:
+
+```ts
+cookieConsent({
+  version: 1,
+  categories: { /* ... */ },
+  ui: {
+    banner: {
+      layout: 'box',          // 'bar' | 'box' | 'cloud' | 'popup'
+      position: 'bottom-right',
+      scrim: false,           // cloud-only passthrough; popup always on, bar/box always off
+    },
+  },
+});
+```
+
+#### `bar` — full-width strip (default)
+
+```
+┌───────────────────────────────────┐
+│                                   │
+│          page content             │
+│                                   │
+├───────────────────────────────────┤
+│ 🍪  We use cookies…   [✓] [✗] [⚙] │
+└───────────────────────────────────┘
+```
+
+Edge-to-edge strip anchored to `bottom` (default) or `top`. Minimal visual
+disruption — the right default for content-heavy sites that just need a clear
+opt-in surface.
+
+#### `box` — corner card
+
+```
+┌───────────────────────────────────┐
+│                                   │
+│                                   │
+│          page content             │
+│                                   │
+│                     ┌────────────┐│
+│                     │ 🍪 We use  ││
+│                     │ cookies…   ││
+│                     │ [✓] [✗]    ││
+│                     │ [⚙]        ││
+│                     └────────────┘│
+└───────────────────────────────────┘
+```
+
+Compact card (≈ 420px) pinned to any corner. Buttons stack inside so the card
+stays narrow. Good for product UIs that want the consent out of the way.
+
+#### `cloud` — floating padded strip
+
+```
+┌───────────────────────────────────┐
+│                                   │
+│          page content             │
+│                                   │
+│  ╭─────────────────────────────╮  │
+│  │ 🍪 We use cookies…  [✓][✗]… │  │
+│  ╰─────────────────────────────╯  │
+└───────────────────────────────────┘
+```
+
+Rounded card with side margins, floating above the page. Optionally pair with
+`scrim: true` to dim the background without turning it into a modal.
+
+#### `popup` — centered modal
+
+```
+┌───────────────────────────────────┐
+│░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
+│░░░░░░░  ┌─────────────────┐  ░░░░ │
+│░░░░░░░  │ 🍪 We use       │  ░░░░ │
+│░░░░░░░  │ cookies…        │  ░░░░ │
+│░░░░░░░  │   [✓]   [✗]     │  ░░░░ │
+│░░░░░░░  │     [⚙]         │  ░░░░ │
+│░░░░░░░  └─────────────────┘  ░░░░ │
+│░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
+└───────────────────────────────────┘
+```
+
+Centered card with an always-on scrim. Demands an explicit choice — use when
+passive consent isn't legally sufficient. The scrim is click-inert: there's
+no dismiss-by-clicking-outside, because that would silently record a choice.
+
+#### Position validity per layout
+
+Invalid combinations fall back to the layout's default and emit a
+`console.warn` in dev so misconfiguration is loud.
+
+| Layout  | Valid positions                                            | Default          |
+| ------- | ---------------------------------------------------------- | ---------------- |
+| `bar`   | `top`, `bottom`                                            | `bottom`         |
+| `box`   | `top-left`, `top-right`, `bottom-left`, `bottom-right`     | `bottom-right`   |
+| `cloud` | `top`, `bottom`                                            | `bottom`         |
+| `popup` | `center`                                                   | `center`         |
+
+#### Layout-related CSS tokens
+
+Every layout honours the visual tokens above; a handful of extra knobs control
+width and viewport gutters. Override them on `:root` to fine-tune the frame
+without re-writing per-variant selectors.
+
+| Token | Default | Role |
+| --- | --- | --- |
+| `--cc-banner-max-width` | `72rem` | Content cap inside `bar` / `cloud`. Doesn't affect `box` / `popup`. |
+| `--cc-box-width` | `26rem` | Target width of the `box` variant. Caps against viewport width minus `--cc-banner-offset` gutters. |
+| `--cc-popup-width` | `30rem` | Target width of the `popup` variant. Caps the same way as `--cc-box-width`. |
+| `--cc-banner-offset` | `1rem` | Gap between the banner and viewport edges for `box` / `cloud` / `popup`. Also shrinks the responsive cap on width. |
+
+#### Styling hooks
+
+The banner renders a single element whose layout is selected via data
+attributes: `data-cc-layout` (`bar` / `box` / `cloud` / `popup`),
+`data-cc-position`, and `data-cc-scrim`. Target them directly if you want to
+override per-variant styling without forking the integration.
+
+```css
+/* Tighten the box variant on marketing pages only */
+.marketing .cc-banner[data-cc-layout='box'] {
+  --cc-box-width: 22rem;
+}
+```
 
 ### Use with a strict Content Security Policy
 
