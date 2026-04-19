@@ -42,9 +42,9 @@ test.describe('Consent state', () => {
   test('save preferences → respects individual toggles', async ({ page }) => {
     await page.locator(sel.manage()).click();
 
-    // The real inputs are visually hidden (width/height: 0) so Playwright's
-    // check()/uncheck() can't target them directly. Click the wrapping
-    // <label class="cc-toggle"> which toggles the input.
+    // Each category renders as a [role="switch"] div — clicking it flips
+    // aria-checked. Playwright's check()/uncheck() don't drive ARIA switches,
+    // so we click through the helper selector.
     await page.locator(sel.toggleLabel('analytics')).click();
     // Marketing default is false, so nothing to uncheck — ensure it stays off
     // by reading the checkbox state without touching it.

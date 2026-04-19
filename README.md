@@ -675,6 +675,37 @@ stylesheet without forking anything:
 }
 ```
 
+The tokens fall into three layers:
+
+| Token | Role |
+| --- | --- |
+| `--cc-primary` / `--cc-primary-hover` | Accent — primary-button fill and focus ring. |
+| `--cc-accent-ink` | Text colour painted on top of an accent fill (e.g. the primary button label). |
+| `--cc-bg` | Solid page-level background for surfaces that aren't floating. |
+| `--cc-surface` | Raised tint used inside cards for subtle separation. |
+| `--cc-surface-2` / `--cc-surface-3` | Top and bottom stops of the floating-surface gradient (banner + modal card). Both use 8-digit hex so the auras and backdrop-filter read through them. |
+| `--cc-text` / `--cc-text-muted` | Body copy and secondary copy. |
+| `--cc-text-dim` / `--cc-text-mute` | Tertiary steps for metadata and captions. |
+| `--cc-border` | Default divider / toggle-track stroke. |
+| `--cc-stroke-2` | Stronger border used around focused / elevated surfaces. |
+| `--cc-aura-1` / `--cc-aura-2` | Radial tint layers painted onto the banner and modal card. Use 8-digit hex with low alpha. |
+| `--cc-shadow-card` | Composite card shadow with an inset highlight line. Applied to the banner and modal card. |
+| `--cc-radius` / `--cc-radius-sm` / `--cc-radius-xs` / `--cc-radius-pill` | Corner radius scale. |
+| `--cc-font-family` | Font stack; defaults to `inherit` so the banner picks up your site font. |
+
+All tokens ship as **hex** (including 8-digit hex like `#3b82f614` for alpha)
+for maximum compatibility. There's no OKLCH in the shipped stylesheet.
+
+Swap just the accent without touching the depth layers:
+
+```css
+:root {
+  --cc-primary: #16a34a;
+  --cc-primary-hover: #15803d;
+  /* --cc-accent-ink defaults to #ffffff which pairs with the green */
+}
+```
+
 ### Use with a strict Content Security Policy
 
 The integration is compatible with strict CSPs out of the box:
@@ -859,6 +890,12 @@ if you don't declare it, and the narrow type kicks in the moment you do.
 - Banner and modal both toggle `aria-hidden` in lockstep with their
   visibility, so screen readers don't announce them while they are
   visually hidden.
+- Category toggles are `[role="switch"]` with `aria-checked` (and
+  `aria-disabled="true"` on the locked essential category). `Space` and
+  `Enter` flip them; focus rings follow `:focus-visible`.
+- Respects `prefers-reduced-motion: reduce` — the banner/modal fade, the
+  switch thumb transition, and the overlay fade are all dropped when the
+  user has opted into reduced motion.
 - All buttons have `type="button"` so they never submit ambient forms.
 
 ## Repository layout

@@ -24,18 +24,18 @@ test.describe('Keyboard', () => {
     await expectBannerVisible(page, false);
   });
 
-  // Custom switch styling lands with #77; the underlying input remains a
-  // real checkbox, but once restyled we want to confirm Space keeps working
-  // and Enter is explicitly handled where appropriate.
-  test.fixme('Space/Enter toggles a category switch (#77)', async ({ page }) => {
+  test('Space/Enter toggles a category switch', async ({ page }) => {
     await page.locator(sel.manage()).click();
+    await expectModalVisible(page, true);
     const analytics = page.locator(sel.switch('analytics'));
 
-    await analytics.focus();
+    // `locator.press` focuses then presses, which avoids the race with the
+    // modal's rAF-based initial-focus hand-off. `page.keyboard.press` alone
+    // would sometimes fire while focus was still on the close button.
     await expect(analytics).not.toBeChecked();
-    await page.keyboard.press('Space');
+    await analytics.press('Space');
     await expect(analytics).toBeChecked();
-    await page.keyboard.press('Enter');
+    await analytics.press('Enter');
     await expect(analytics).not.toBeChecked();
   });
 

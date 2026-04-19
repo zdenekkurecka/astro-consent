@@ -26,6 +26,8 @@ const BUILT_IN_DEFAULTS: ResolvedConsentText = {
   essentialLabel: 'Essential',
   essentialDescription: 'Required for the website to function. Cannot be disabled.',
   essentialBadge: 'Required',
+  badgeRequired: 'Required',
+  badgeOptional: 'Optional',
   categories: {},
 };
 
@@ -53,7 +55,13 @@ function mergeText(base: ResolvedConsentText, layer: ConsentText | undefined): R
   }
   if (layer.essentialBadge !== undefined) {
     next.essentialBadge = layer.essentialBadge;
+    // Back-compat: if the consumer set the old `essentialBadge` but not the
+    // new `badgeRequired`, promote it so the rendered badge reflects their
+    // intent without requiring a config migration.
+    if (layer.badgeRequired === undefined) next.badgeRequired = layer.essentialBadge;
   }
+  if (layer.badgeRequired !== undefined) next.badgeRequired = layer.badgeRequired;
+  if (layer.badgeOptional !== undefined) next.badgeOptional = layer.badgeOptional;
 
   if (layer.categories) {
     for (const [key, override] of Object.entries(layer.categories)) {
@@ -199,24 +207,34 @@ function createCategoryToggle(
   description: string,
   isEssential: boolean,
   defaultValue: boolean,
-  badge?: string,
+  badgeText: string,
 ): string {
-  const checked = isEssential || defaultValue ? 'checked' : '';
-  const disabled = isEssential ? 'disabled' : '';
-  const id = `cc-toggle-${escapeHtml(key)}`;
-  const descId = `${id}-desc`;
-  const badgeHtml = badge ? `<span class="cc-badge">${escapeHtml(badge)}</span>` : '';
+  const checked = isEssential || defaultValue;
+  const labelId = `cc-toggle-${escapeHtml(key)}-label`;
+  const descId = `cc-toggle-${escapeHtml(key)}-desc`;
+  const badgeClass = isEssential ? 'cc-badge cc-badge--required' : 'cc-badge';
+  const badgeHtml = `<span class="${badgeClass}">${escapeHtml(badgeText)}</span>`;
+  // Essential stays focusable so keyboard users can still traverse past it,
+  // but `aria-disabled` + `data-locked` signal that it can't be flipped.
+  const lockedAttrs = isEssential
+    ? `aria-disabled="true" data-locked="true" tabindex="0"`
+    : `tabindex="0"`;
 
   return `
     <div class="cc-category">
       <div class="cc-category-header">
         <div class="cc-category-label-group">
-          <label class="cc-category-label" for="${id}">${escapeHtml(label)}</label>${badgeHtml}
+          <span class="cc-category-label" id="${labelId}">${escapeHtml(label)}</span>${badgeHtml}
         </div>
-        <label class="cc-toggle">
-          <input type="checkbox" id="${id}" data-cc-category="${escapeHtml(key)}" aria-describedby="${descId}" ${checked} ${disabled} />
-          <span class="cc-toggle-slider" aria-hidden="true"></span>
-        </label>
+        <div
+          class="cc-switch"
+          role="switch"
+          aria-checked="${checked ? 'true' : 'false'}"
+          aria-labelledby="${labelId}"
+          aria-describedby="${descId}"
+          data-cc-category="${escapeHtml(key)}"
+          ${lockedAttrs}
+        ></div>
       </div>
       <p class="cc-category-description" id="${descId}">${escapeHtml(description)}</p>
     </div>`;
@@ -229,13 +247,20 @@ function createModalHTML(config: SerializableConsentConfig, text: ResolvedConsen
     text.essentialDescription,
     true,
     true,
-    text.essentialBadge,
+    text.badgeRequired,
   );
 
   const categoryToggles = Object.entries(config.categories)
     .map(([key, cat]) => {
       const resolved = resolveCategoryText(key, cat, text);
-      return createCategoryToggle(key, resolved.label, resolved.description, false, cat.default);
+      return createCategoryToggle(
+        key,
+        resolved.label,
+        resolved.description,
+        false,
+        cat.default,
+        text.badgeOptional,
+      );
     })
     .join('');
 
@@ -435,28 +460,28 @@ export function isModalVisible(): boolean {
   return document.getElementById(MODAL_ID)?.classList.contains('cc-visible') ?? false;
 }
 
-// Scoped to `#cc-modal input[data-cc-category]` so declarative script-blocking
-// markup (which reuses `data-cc-category` on <script>/<iframe> elements)
-// doesn't leak into modal state reads.
-const MODAL_TOGGLE_SELECTOR = `#${MODAL_ID} input[data-cc-category]`;
+// Scoped to `#cc-modal [role="switch"][data-cc-category]` so declarative
+// script-blocking markup (which reuses `data-cc-category` on <script>/<iframe>
+// elements) doesn't leak into modal state reads.
+const MODAL_TOGGLE_SELECTOR = `#${MODAL_ID} [role="switch"][data-cc-category]`;
 
 export function updateModalToggles(categories: Record<string, boolean>): void {
-  const inputs = document.querySelectorAll<HTMLInputElement>(MODAL_TOGGLE_SELECTOR);
-  for (const input of inputs) {
-    const key = input.getAttribute('data-cc-category');
-    if (key && !input.disabled) {
-      input.checked = categories[key] ?? false;
+  const switches = document.querySelectorAll<HTMLElement>(MODAL_TOGGLE_SELECTOR);
+  for (const sw of switches) {
+    const key = sw.getAttribute('data-cc-category');
+    if (key && sw.getAttribute('data-locked') !== 'true') {
+      sw.setAttribute('aria-checked', categories[key] ? 'true' : 'false');
     }
   }
 }
 
 export function getModalSelections(): Record<string, boolean> {
   const selections: Record<string, boolean> = {};
-  const inputs = document.querySelectorAll<HTMLInputElement>(MODAL_TOGGLE_SELECTOR);
-  for (const input of inputs) {
-    const key = input.getAttribute('data-cc-category');
+  const switches = document.querySelectorAll<HTMLElement>(MODAL_TOGGLE_SELECTOR);
+  for (const sw of switches) {
+    const key = sw.getAttribute('data-cc-category');
     if (key && key !== 'essential') {
-      selections[key] = input.checked;
+      selections[key] = sw.getAttribute('aria-checked') === 'true';
     }
   }
   return selections;

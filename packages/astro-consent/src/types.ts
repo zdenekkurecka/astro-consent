@@ -160,7 +160,17 @@ export interface ConsentText<K extends string = string> {
   // Essential category
   essentialLabel?: string;
   essentialDescription?: string;
+  /**
+   * @deprecated Use `badgeRequired` instead. When both are provided,
+   * `badgeRequired` wins. Kept as a fallback so existing configs keep working.
+   */
   essentialBadge?: string;
+
+  // Category badges
+  /** Badge text on the required (essential) category. Default `"Required"`. */
+  badgeRequired?: string;
+  /** Badge text on optional categories. Default `"Optional"`. */
+  badgeOptional?: string;
 
   /** Per-category label/description overrides, keyed by category key. */
   categories?: Partial<Record<K, ConsentCategoryText>>;
