@@ -82,4 +82,45 @@ test.describe('Declarative script blocking', () => {
     await expect(page.locator('#dynamic-marker')).toHaveAttribute('data-loaded', 'false');
     expect(await page.evaluate(() => (window as any).__ccDynamicLoaded)).toBeUndefined();
   });
+
+  // Regression coverage for #84 — the observer's nested-subtree walk must
+  // pick up a blocked script that arrives as a descendant of the added
+  // node (not the added node itself), and must still fire for insertions
+  // that happen in a later task than the consent grant.
+  test('MutationObserver activates scripts inside a nested subtree', async ({ page }) => {
+    await page.locator(sel.acceptAll()).click();
+
+    await page.evaluate(() => {
+      const wrapper = document.createElement('div');
+      wrapper.id = 'nested-wrapper';
+      const s = document.createElement('script');
+      s.setAttribute('type', 'text/plain');
+      s.setAttribute('data-cc-category', 'analytics');
+      s.textContent = 'window.__ccNestedLoaded = true;';
+      wrapper.appendChild(s);
+      document.body.appendChild(wrapper);
+    });
+
+    await expect
+      .poll(() => page.evaluate(() => (window as any).__ccNestedLoaded))
+      .toBe(true);
+  });
+
+  test('MutationObserver activates scripts inserted asynchronously', async ({ page }) => {
+    await page.locator(sel.acceptAll()).click();
+
+    await page.evaluate(() => {
+      setTimeout(() => {
+        const s = document.createElement('script');
+        s.setAttribute('type', 'text/plain');
+        s.setAttribute('data-cc-category', 'analytics');
+        s.textContent = 'window.__ccDelayedLoaded = true;';
+        document.body.appendChild(s);
+      }, 50);
+    });
+
+    await expect
+      .poll(() => page.evaluate(() => (window as any).__ccDelayedLoaded))
+      .toBe(true);
+  });
 });
