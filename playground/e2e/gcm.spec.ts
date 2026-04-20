@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { clearConsent, sel } from './helpers';
+import { buildGcmDefaultSnippet } from '../../packages/astro-consent/src/gcm.js';
 
 /**
  * Collect every entry in `window.dataLayer`, normalizing the `arguments`-shaped
@@ -132,5 +133,20 @@ test.describe('Google Consent Mode v2', () => {
       analytics_storage: 'granted',
       ad_storage: 'granted',
     });
+  });
+});
+
+test.describe('buildGcmDefaultSnippet escaping (#72)', () => {
+  test('escapes </script> in region keys so inline tag cannot be terminated', () => {
+    const snippet = buildGcmDefaultSnippet({
+      mapping: { analytics: ['analytics_storage'] },
+      regions: { 'US-CA</script><script>alert(1)</script>': 'granted' },
+    });
+
+    // HTML's "script data end tag open state" triggers on `</` followed by an
+    // ASCII letter — escaping any `</` sequence is sufficient to keep the
+    // surrounding inline `<script>` tag from terminating early.
+    expect(snippet).not.toContain('</');
+    expect(snippet).toContain('<\\/script>');
   });
 });
