@@ -21,6 +21,12 @@ const { title } = Astro.props;
         max-width: 48rem;
         margin: 0 auto;
         padding: 2rem;
+        /* The bar / cloud banners are `position: fixed; bottom: 0` and cover
+         * the viewport's bottom edge. Without extra scroll runway the
+         * layout-picker buttons end up under the banner and clicks are
+         * intercepted. Adding ~18rem of trailing space lets the user scroll
+         * any control out from under the banner. */
+        padding-bottom: 18rem;
         color: #1a1a1a;
         line-height: 1.6;
       }

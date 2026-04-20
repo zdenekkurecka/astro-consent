@@ -230,6 +230,14 @@ export interface ConsentText<K extends string = string> {
   /** ARIA label on the banner's close (×) button. Default `"Dismiss"`. */
   dismissAriaLabel?: string;
 
+  // Dismiss confirmation toast (shown on accept / reject / save).
+  /** Toast headline after Accept all. Default `"All cookies accepted"`. */
+  toastAccepted?: string;
+  /** Toast headline after Reject all. Default `"Only essential cookies"`. */
+  toastRejected?: string;
+  /** Toast headline after Save preferences. Default `"Preferences saved"`. */
+  toastSaved?: string;
+
   // Essential category
   essentialLabel?: string;
   essentialDescription?: string;

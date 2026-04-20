@@ -655,6 +655,10 @@ cookieConsent({
       savePreferences: 'Save preferences',
       essentialLabel: 'Essential',
       essentialDescription: 'Required for the website to function. Cannot be disabled.',
+      // Dismiss confirmation toast (shown on accept/reject/save).
+      toastAccepted: 'All cookies accepted',
+      toastRejected: 'Only essential cookies',
+      toastSaved: 'Preferences saved',
       categories: {
         analytics: {
           label: 'Analytics',
@@ -672,6 +676,9 @@ cookieConsent({
       savePreferences: 'Uložit předvolby',
       essentialLabel: 'Nezbytné',
       essentialDescription: 'Nutné pro fungování webu. Nelze vypnout.',
+      toastAccepted: 'Přijato vše',
+      toastRejected: 'Pouze nezbytné',
+      toastSaved: 'Předvolby uloženy',
       categories: {
         analytics: {
           label: 'Analytické',
@@ -1085,6 +1092,11 @@ window.astroConsent?.reset();
 Both are typed `CustomEvent`s on `document`, so in TypeScript you get full
 autocompletion on `e.detail.categories`.
 
+The dismiss-confirmation animation and success toast (accept / reject /
+save) are purely visual — no dedicated event is emitted for them. React to
+`astro-consent:consent` / `astro-consent:change` as usual; they fire at the
+same moment the dismiss animation starts so listeners see no extra delay.
+
 ### Typed category keys
 
 By default `e.detail.categories` is typed as `Record<string, boolean>` — usable,
@@ -1138,9 +1150,15 @@ if you don't declare it, and the narrow type kicks in the moment you do.
   `aria-disabled="true"` on the locked essential category). `Space` and
   `Enter` flip them; focus rings follow `:focus-visible`.
 - Respects `prefers-reduced-motion: reduce` — the banner/modal fade, the
-  switch thumb transition, the overlay fade, and the single-layer
-  expand/collapse + reject-button collapse are all dropped when the user
-  has opted into reduced motion.
+  switch thumb transition, the overlay fade, the single-layer
+  expand/collapse + reject-button collapse, and the dismiss-confirmation
+  collapse are all reduced when the user has opted into reduced motion.
+  The per-variant collapse keyframe drops to a plain 150ms opacity fade
+  and the success toast appears without its entry animation.
+- The dismiss-confirmation toast is a `role="status"` region with
+  `aria-live="polite"`, so screen readers announce the outcome headline
+  (e.g. "Preferences saved") after an accept/reject/save without stealing
+  focus.
 - All buttons have `type="button"` so they never submit ambient forms.
 - In single-layer mode (`ui.banner.categoriesOnBanner: true`), the banner
   retains `role="dialog"` only when paired with the `popup` layout (the
