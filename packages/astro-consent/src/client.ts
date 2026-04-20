@@ -34,6 +34,9 @@ import {
   isBannerExpanded,
   setBannerExpanded,
   handleModalTabTrap,
+  dismissBannerWithConfirm,
+  dismissModalWithConfirm,
+  type DismissKind,
 } from './ui.js';
 import { activateBlockedResources, initScriptBlocker } from './scripts.js';
 import { buildGcmUpdatePayload } from './gcm.js';
@@ -197,7 +200,7 @@ export function initConsentManager(config: SerializableConsentConfig): void {
             log(`save-preferences (banner) →`, selections, isUpdate ? '(update)' : '(initial)');
             const state = savePreferences(config, selections);
             persist(state);
-            hideBanner();
+            if (!dismissBannerWithConfirm(text, 'saved')) hideBanner();
             consentFiredThisSession = true;
             emit(isUpdate ? CHANGE_EVENT : CONSENT_EVENT, state);
             break;
@@ -206,8 +209,19 @@ export function initConsentManager(config: SerializableConsentConfig): void {
           const isUpdate = !needsConsent(config.version, config.maxAgeDays);
           const state = acceptAll(config);
           persist(state);
-          hideBanner();
-          hideModal();
+          // "Accepted" via the banner vs modal routes to different surfaces.
+          // The guard is idempotent: if the surface isn't visible (e.g. the
+          // modal button was clicked while the banner was showing), the
+          // call returns false and the other path hides that surface
+          // instantly — a no-op if it was already hidden.
+          const kind: DismissKind = 'accepted';
+          if (action === 'modal-accept-all') {
+            if (!dismissModalWithConfirm(text, kind)) hideModal();
+            hideBanner();
+          } else {
+            if (!dismissBannerWithConfirm(text, kind)) hideBanner();
+            hideModal();
+          }
           consentFiredThisSession = true;
           emit(isUpdate ? CHANGE_EVENT : CONSENT_EVENT, state);
           break;
@@ -219,8 +233,14 @@ export function initConsentManager(config: SerializableConsentConfig): void {
           const isUpdate = !needsConsent(config.version, config.maxAgeDays);
           const state = rejectAll(config);
           persist(state);
-          hideBanner();
-          hideModal();
+          const kind: DismissKind = 'rejected';
+          if (action === 'modal-reject-all') {
+            if (!dismissModalWithConfirm(text, kind)) hideModal();
+            hideBanner();
+          } else {
+            if (!dismissBannerWithConfirm(text, kind)) hideBanner();
+            hideModal();
+          }
           consentFiredThisSession = true;
           emit(isUpdate ? CHANGE_EVENT : CONSENT_EVENT, state);
           break;
@@ -258,7 +278,7 @@ export function initConsentManager(config: SerializableConsentConfig): void {
           log(`save-preferences →`, selections, isUpdate ? '(update)' : '(initial)');
           const state = savePreferences(config, selections);
           persist(state);
-          hideModal();
+          if (!dismissModalWithConfirm(text, 'saved')) hideModal();
           consentFiredThisSession = true;
           emit(isUpdate ? CHANGE_EVENT : CONSENT_EVENT, state);
           break;

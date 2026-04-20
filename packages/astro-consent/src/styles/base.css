@@ -740,11 +740,146 @@
   outline-offset: 2px;
 }
 
-/* ── Reduced motion ─────────────────────────────────────
- * Strips the surface fade/slide and the switch thumb animation so users
- * with `prefers-reduced-motion: reduce` don't see the added motion.
+/* ── Dismiss confirmation ──────────────────────────────────
+ *
+ * Two-stage state machine (see `ui.ts → runDismiss`):
+ *   1. `cc-confirming` lands immediately on accept/reject/save → disables
+ *      pointer interaction so a second click can't fire mid-animation.
+ *   2. `cc-confirmed` lands ~220ms later → plays a per-variant collapse
+ *      keyframe. JS clears the classes on `animationend`.
+ *
+ * Keyframes are all prefixed `cc-dismiss-` so the state machine's
+ * `startsWith('cc-dismiss-')` guard picks them up uniformly.
  */
 
+.cc-banner.cc-confirming,
+.cc-modal.cc-confirming {
+  pointer-events: none;
+}
+
+/* Lift → scale down → blur fade-out. Used for bar, cloud, and modal. */
+@keyframes cc-dismiss-lift {
+  0%   { opacity: 1; transform: translateY(0)     scale(1);    filter: blur(0); }
+  60%  { opacity: 1; transform: translateY(-8px)  scale(0.96); filter: blur(0); }
+  100% { opacity: 0; transform: translateY(24px)  scale(0.92); filter: blur(4px); }
+}
+
+/* Popup variant — identical motion, but preserves the centered
+ * `translate(-50%, -50%)` so the collapse stays anchored to viewport centre. */
+@keyframes cc-dismiss-popup {
+  0%   { opacity: 1; transform: translate(-50%, -50%)               scale(1);    filter: blur(0); }
+  60%  { opacity: 1; transform: translate(-50%, calc(-50% - 8px))   scale(0.96); filter: blur(0); }
+  100% { opacity: 0; transform: translate(-50%, calc(-50% + 24px))  scale(0.92); filter: blur(4px); }
+}
+
+/* Box corner card — slide out along the entry axis to the nearest side. */
+@keyframes cc-dismiss-slide-right {
+  0%   { opacity: 1; transform: translateX(0);    filter: blur(0); }
+  100% { opacity: 0; transform: translateX(48px); filter: blur(4px); }
+}
+@keyframes cc-dismiss-slide-left {
+  0%   { opacity: 1; transform: translateX(0);     filter: blur(0); }
+  100% { opacity: 0; transform: translateX(-48px); filter: blur(4px); }
+}
+
+/* Reduced-motion fallback — a plain opacity fade. Must still be a keyframe
+ * animation (not `opacity: 0` set directly) so `animationend` fires and the
+ * dismiss state machine settles. */
+@keyframes cc-dismiss-fade {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.cc-banner[data-cc-layout='bar'].cc-confirmed,
+.cc-banner[data-cc-layout='cloud'].cc-confirmed,
+.cc-modal.cc-confirmed {
+  animation: cc-dismiss-lift 0.5s cubic-bezier(0.5, 0, 0.2, 1) forwards;
+}
+
+.cc-banner[data-cc-layout='popup'].cc-confirmed {
+  animation: cc-dismiss-popup 0.5s cubic-bezier(0.5, 0, 0.2, 1) forwards;
+}
+
+.cc-banner[data-cc-layout='box'][data-cc-position='bottom-right'].cc-confirmed,
+.cc-banner[data-cc-layout='box'][data-cc-position='top-right'].cc-confirmed {
+  animation: cc-dismiss-slide-right 0.5s cubic-bezier(0.5, 0, 0.2, 1) forwards;
+}
+.cc-banner[data-cc-layout='box'][data-cc-position='bottom-left'].cc-confirmed,
+.cc-banner[data-cc-layout='box'][data-cc-position='top-left'].cc-confirmed {
+  animation: cc-dismiss-slide-left 0.5s cubic-bezier(0.5, 0, 0.2, 1) forwards;
+}
+
+/* ── Success toast ─────────────────────────────────────────
+ *
+ * Fixed bottom-centre pill announced to assistive tech via
+ * `role="status"` + `aria-live="polite"`. Auto-dismisses via a chained CSS
+ * animation (0.5s in → 2.1s hold → 0.4s out) — no JS timer, `ui.ts` only
+ * removes the node on the out-animation's `animationend`.
+ */
+.cc-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  z-index: 10002;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 1rem 0.625rem 0.625rem;
+  border-radius: var(--cc-radius-pill);
+  background:
+    radial-gradient(100% 80% at 10% 100%, var(--cc-aura-2) 0%, transparent 60%),
+    linear-gradient(180deg, var(--cc-surface-2), var(--cc-surface-3));
+  border: 1px solid var(--cc-stroke-2);
+  box-shadow: var(--cc-shadow-card);
+  backdrop-filter: blur(16px) saturate(1.2);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  font-family: var(--cc-font-family);
+  font-size: 0.8125rem;
+  color: var(--cc-text);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 40px);
+  animation:
+    cc-toast-in 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards,
+    cc-toast-out 0.4s ease-in 2.6s forwards;
+}
+
+@keyframes cc-toast-in {
+  0%   { opacity: 0; transform: translate(-50%, 40px) scale(0.9); }
+  100% { opacity: 1; transform: translate(-50%, 0)    scale(1);   }
+}
+@keyframes cc-toast-out {
+  0%   { opacity: 1; transform: translate(-50%, 0)    scale(1);    }
+  100% { opacity: 0; transform: translate(-50%, -8px) scale(0.96); }
+}
+
+.cc-toast-check {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background: var(--cc-primary);
+  color: var(--cc-accent-ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.cc-toast-check svg {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+.cc-toast-title {
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+/* ── Reduced motion ─────────────────────────────────────
+ * Strips surface fade-ins and the switch thumb motion for users with
+ * `prefers-reduced-motion: reduce`. Dismiss animations collapse to a plain
+ * 150ms opacity fade so `animationend` still fires and the state machine
+ * settles. Toast loses its entry animation but keeps the auto-dismiss so
+ * the node still cleans itself up.
+ */
 @media (prefers-reduced-motion: reduce) {
   .cc-banner,
   .cc-overlay,
@@ -753,7 +888,19 @@
   .cc-switch,
   .cc-switch::after {
     transition: none !important;
+  }
+  .cc-switch,
+  .cc-switch::after {
     animation: none !important;
+  }
+  .cc-banner.cc-confirmed,
+  .cc-modal.cc-confirmed {
+    animation: cc-dismiss-fade 0.15s linear forwards !important;
+  }
+  .cc-toast {
+    opacity: 1;
+    transform: translate(-50%, 0);
+    animation: cc-toast-out 0.4s linear 2.6s forwards !important;
   }
 }
 

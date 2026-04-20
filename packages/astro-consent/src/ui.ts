@@ -32,6 +32,9 @@ const BUILT_IN_DEFAULTS: ResolvedConsentText = {
   essentialBadge: 'Required',
   badgeRequired: 'Required',
   badgeOptional: 'Optional',
+  toastAccepted: 'All cookies accepted',
+  toastRejected: 'Only essential cookies',
+  toastSaved: 'Preferences saved',
   categories: {},
 };
 
@@ -68,6 +71,9 @@ function mergeText(base: ResolvedConsentText, layer: ConsentText | undefined): R
   }
   if (layer.badgeRequired !== undefined) next.badgeRequired = layer.badgeRequired;
   if (layer.badgeOptional !== undefined) next.badgeOptional = layer.badgeOptional;
+  if (layer.toastAccepted !== undefined) next.toastAccepted = layer.toastAccepted;
+  if (layer.toastRejected !== undefined) next.toastRejected = layer.toastRejected;
+  if (layer.toastSaved !== undefined) next.toastSaved = layer.toastSaved;
 
   if (layer.categories) {
     for (const [key, override] of Object.entries(layer.categories)) {
@@ -155,6 +161,25 @@ const MODAL_TITLE_ID = 'cc-modal-title';
 const OVERLAY_ID = 'cc-overlay';
 const BANNER_ID = 'cc-banner';
 const BANNER_SCRIM_ID = 'cc-banner-scrim';
+const TOAST_TESTID = 'cc-toast';
+
+/** What the user just did — drives the toast headline. */
+export type DismissKind = 'accepted' | 'rejected' | 'saved';
+
+/**
+ * Delay from `cc-confirming` to `cc-confirmed` — matches the prototype's
+ * 220ms lead-in so the scrim has time to start fading before the card
+ * collapses. See `docs/design/consent-v0.4-prototype.html:904`.
+ */
+const CONFIRM_LEAD_IN_MS = 220;
+
+/**
+ * Fallback cap covering the longest collapse keyframe (500ms) + a small
+ * buffer. Only consulted if `animationend` never fires (e.g. the surface is
+ * removed mid-animation, or keyframes were overridden away). Keeps the
+ * `isDismissing` guard from latching on.
+ */
+const DISMISS_FALLBACK_MS = 900;
 
 const VALID_LAYOUTS: readonly BannerLayout[] = ['bar', 'box', 'cloud', 'popup'];
 const VALID_POSITIONS_PER_LAYOUT: Record<BannerLayout, readonly BannerPosition[]> = {
@@ -512,6 +537,151 @@ export function hideBanner(): void {
   el?.setAttribute('aria-hidden', 'true');
   const scrim = document.getElementById(BANNER_SCRIM_ID);
   scrim?.classList.remove('cc-visible');
+}
+
+// Module-level latch that swallows repeat accept/reject/save clicks while a
+// dismiss animation is mid-flight. Mirrors the prototype's `isConfirming`
+// guard (`docs/design/consent-v0.4-prototype.html:863`).
+let isDismissing = false;
+
+/**
+ * Build + inject the success toast. Idempotent: any in-flight toast is
+ * removed first so a rapid re-show doesn't stack DOM nodes. The toast runs
+ * its entry + auto-dismiss animations in CSS; the JS here only wires the
+ * `animationend` cleanup so the node leaves the DOM once the out-animation
+ * completes.
+ */
+function spawnToast(title: string): void {
+  for (const stale of document.querySelectorAll(`[data-testid="${TOAST_TESTID}"]`)) {
+    stale.remove();
+  }
+  const toast = document.createElement('div');
+  toast.className = 'cc-toast cc-visible';
+  toast.setAttribute('data-testid', TOAST_TESTID);
+  toast.setAttribute('role', 'status');
+  toast.setAttribute('aria-live', 'polite');
+  toast.innerHTML =
+    `<span class="cc-toast-check" aria-hidden="true">` +
+    `<svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 6.5l2.5 2.5 4.5-5"/></svg>` +
+    `</span>` +
+    `<span class="cc-toast-title">${escapeHtml(title)}</span>`;
+  document.body.appendChild(toast);
+
+  // Remove on the out-animation's end. We listen for `cc-toast-out`
+  // specifically because the element plays both `cc-toast-in` and
+  // `cc-toast-out` in sequence — removing on the first `animationend` would
+  // drop the node before the user sees it.
+  const cleanup = (e: AnimationEvent): void => {
+    if (e.animationName !== 'cc-toast-out') return;
+    toast.removeEventListener('animationend', cleanup);
+    toast.remove();
+  };
+  toast.addEventListener('animationend', cleanup);
+}
+
+/**
+ * Shared dismiss state machine used by banner and modal. Stages:
+ *   1. Immediately add `cc-confirming` → disables pointer events so a second
+ *      click can't land. Drop scrim/overlay `cc-visible` so they fade out.
+ *   2. After CONFIRM_LEAD_IN_MS, add `cc-confirmed` (plays collapse keyframe)
+ *      and spawn the toast.
+ *   3. On the collapse keyframe's `animationend`, strip `cc-visible` +
+ *      `cc-confirming` + `cc-confirmed`, set `aria-hidden="true"`, release
+ *      the `isDismissing` latch.
+ *
+ * A fallback timer releases the latch even if `animationend` never fires
+ * (e.g. the element is removed mid-animation, or keyframes were overridden).
+ */
+function runDismiss(
+  surface: HTMLElement,
+  companion: HTMLElement | null,
+  toastTitle: string,
+): void {
+  surface.classList.add('cc-confirming');
+  companion?.classList.remove('cc-visible');
+  companion?.setAttribute('aria-hidden', 'true');
+
+  let settled = false;
+  const settle = (): void => {
+    if (settled) return;
+    settled = true;
+    surface.removeEventListener('animationend', onCollapseEnd);
+    window.clearTimeout(fallback);
+    surface.classList.remove('cc-visible', 'cc-confirming', 'cc-confirmed');
+    surface.setAttribute('aria-hidden', 'true');
+    isDismissing = false;
+  };
+  const onCollapseEnd = (e: AnimationEvent): void => {
+    // Multiple animations may emit animationend (e.g. if the surface has a
+    // keyframe chain, or a descendant — like the scrim — finishes its own
+    // transition). Scope to the `cc-dismiss-*` family on the surface itself
+    // so we don't settle early on unrelated animations.
+    if (e.target !== surface) return;
+    if (!e.animationName.startsWith('cc-dismiss-')) return;
+    settle();
+  };
+  const fallback = window.setTimeout(settle, DISMISS_FALLBACK_MS);
+  surface.addEventListener('animationend', onCollapseEnd);
+
+  window.setTimeout(() => {
+    surface.classList.add('cc-confirmed');
+    spawnToast(toastTitle);
+  }, CONFIRM_LEAD_IN_MS);
+}
+
+function toastTitleFor(text: ResolvedConsentText, kind: DismissKind): string {
+  return kind === 'accepted'
+    ? text.toastAccepted
+    : kind === 'rejected'
+      ? text.toastRejected
+      : text.toastSaved;
+}
+
+/**
+ * Animate the banner away and show the confirmation toast. Guarded so a
+ * double-click during the animation is ignored. Returns `false` if the
+ * banner isn't currently visible (caller should fall back to `hideBanner`)
+ * or a dismiss is already in flight.
+ */
+export function dismissBannerWithConfirm(
+  text: ResolvedConsentText,
+  kind: DismissKind,
+): boolean {
+  if (isDismissing) return false;
+  const banner = document.getElementById(BANNER_ID);
+  if (!banner || !banner.classList.contains('cc-visible')) return false;
+  isDismissing = true;
+  const scrim = document.getElementById(BANNER_SCRIM_ID);
+  runDismiss(banner, scrim, toastTitleFor(text, kind));
+  return true;
+}
+
+/**
+ * Animate the modal away and show the confirmation toast. See
+ * `dismissBannerWithConfirm` for the state machine and guard semantics.
+ */
+export function dismissModalWithConfirm(
+  text: ResolvedConsentText,
+  kind: DismissKind,
+): boolean {
+  if (isDismissing) return false;
+  const modal = document.getElementById(MODAL_ID);
+  if (!modal || !modal.classList.contains('cc-visible')) return false;
+  isDismissing = true;
+  const overlay = document.getElementById(OVERLAY_ID);
+  // Restore focus now (same contract as hideModal) so assistive tech lands
+  // on the trigger while the collapse animation plays.
+  const toFocus = previouslyFocused;
+  previouslyFocused = null;
+  if (toFocus && toFocus.isConnected) {
+    try {
+      toFocus.focus();
+    } catch {
+      /* ignore — e.g. element became non-focusable */
+    }
+  }
+  runDismiss(modal, overlay, toastTitleFor(text, kind));
+  return true;
 }
 
 /**
