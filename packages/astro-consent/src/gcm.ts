@@ -151,7 +151,7 @@ export function buildGcmDefaultSnippet(gcm: GoogleConsentModeConfig<string>): st
   const lines: string[] = [
     'window.dataLayer = window.dataLayer || [];',
     'function gtag(){dataLayer.push(arguments);}',
-    `gtag('consent','default',${JSON.stringify({ ...baseDefaults, wait_for_update: waitForUpdate })});`,
+    `gtag('consent','default',${safeStringify({ ...baseDefaults, wait_for_update: waitForUpdate })});`,
   ];
 
   if (gcm.regions) {
@@ -167,7 +167,7 @@ export function buildGcmDefaultSnippet(gcm: GoogleConsentModeConfig<string>): st
         }
       }
       lines.push(
-        `gtag('consent','default',${JSON.stringify({ ...regionDefaults, region: [region] })});`,
+        `gtag('consent','default',${safeStringify({ ...regionDefaults, region: [region] })});`,
       );
     }
   }
@@ -180,6 +180,16 @@ export function buildGcmDefaultSnippet(gcm: GoogleConsentModeConfig<string>): st
   }
 
   return lines.join('\n');
+}
+
+/**
+ * Serialize a payload for embedding inside an inline `<script>`. `JSON.stringify`
+ * does not escape `</`, so an integration-author-supplied value containing
+ * `</script>` would otherwise terminate the surrounding tag. Inputs here are
+ * authored in `astro.config.*` (not end-user input), so this is defense-in-depth.
+ */
+function safeStringify(obj: unknown): string {
+  return JSON.stringify(obj).replace(/<\//g, '<\\/');
 }
 
 /**
