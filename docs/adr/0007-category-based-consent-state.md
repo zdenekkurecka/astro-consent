@@ -1,6 +1,6 @@
 # 0007. Category-based consent state with implicit `essential`
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-04-21
 
 ## Context
@@ -53,13 +53,22 @@ interface ConsentState {
 - **Positive:** `essential: true` being non-negotiable in the stored state
   prevents a user API call from accidentally "denying" the category — the
   write-through always restores it.
-- **Negative:** Category keys are a stringly-typed contract. Mitigated by
-  the `ConsentCategoryKey` marker interface (see `types.ts`) that
-  adopters can augment with their typed keys.
+- **Negative:** Category keys are a stringly-typed contract at runtime.
+  Opt-in type safety is one `.d.ts` file away: adopters augment the
+  empty `ConsentKeys` marker interface via TypeScript declaration
+  merging, and `ResolvedConsentKeys` (a conditional type) flows the
+  narrowed key union into both the `DocumentEventMap` entries for
+  `astro-consent:consent` / `astro-consent:change` *and* the
+  `window.astroConsent` API. Typos become compile errors across the
+  whole public surface; without the augmentation the keys fall back to
+  `Record<string, boolean>`, preserving the no-breakage default.
 
 ## References
 
 - `packages/astro-consent/src/consent.ts:50-87` (state shape + write paths)
-- `packages/astro-consent/src/types.ts` (`ConsentState`,
-  `ConsentCategoryKey`)
+- `packages/astro-consent/src/types.ts` — `ConsentState`
+- `packages/astro-consent/src/types.ts:411-457` — `ConsentKeys` marker
+  interface, `ResolvedConsentKeys` resolver, and the
+  `DocumentEventMap` / `Window` declaration-merging that propagates
+  typed keys across the public surface
 - README §"Category config" and §"Versioning & re-prompting"
