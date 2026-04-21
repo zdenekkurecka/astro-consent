@@ -1,6 +1,6 @@
 # 0006. Dual init for View Transitions and classic navigation
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-04-21
 
 ## Context

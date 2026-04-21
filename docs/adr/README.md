@@ -52,7 +52,7 @@ real choice now or don't record it.
 | 0003 | [Event-based consent API on `document`](./0003-event-based-consent-api.md)                     | Accepted |
 | 0004 | [Strict-CSP safety via hashed assets](./0004-strict-csp-safety.md)                             | Accepted |
 | 0005 | [Google Consent Mode v2 as a first-class opt-in](./0005-google-consent-mode-v2.md)             | Accepted |
-| 0006 | [Dual init for View Transitions and classic navigation](./0006-view-transitions-dual-init.md)  | Proposed |
+| 0006 | [Dual init for View Transitions and classic navigation](./0006-view-transitions-dual-init.md)  | Accepted |
 | 0007 | [Category-based consent state with implicit `essential`](./0007-category-based-consent-state.md) | Proposed |
 | 0008 | [No teardown on revocation](./0008-no-teardown-on-revocation.md)                               | Proposed |
 | 0009 | [Virtual module for build-to-runtime config](./0009-virtual-module-config.md)                  | Proposed |
