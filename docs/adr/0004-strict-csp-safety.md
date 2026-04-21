@@ -1,6 +1,6 @@
 # 0004. Strict-CSP safety via hashed assets
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-04-21
 
 ## Context
@@ -43,15 +43,24 @@ emitted via `injectScript('head-inline', ...)` and only when GCM is enabled
   common case.
 - **Positive:** No inline `<style>` — styles are subject to the same CSP
   protection as any other asset.
-- **Negative:** Adopters who enable GCM on a nonce-only CSP need to either
-  add the snippet's hash or provide a nonce. Documented as a CSP caveat.
-- **Negative:** All config that reaches the client must be JSON-serializable
-  (see [ADR 0009](./0009-virtual-module-config.md)). Functions as config
-  values are impossible.
+- **Negative:** Adopters who enable GCM on a strict CSP pay the cost of
+  the one inline exception — either allowlisting a hash or supplying a
+  nonce. Mitigation is tracked in
+  [ADR 0010](./0010-csp-options-for-gcm-snippet.md) (publish the snippet
+  hash + `googleConsentMode.headInline: false` opt-out); scoped only to
+  the `GCM-enabled × nonce-only-CSP` intersection.
+- **Neutral:** Config reaching the client must be JSON-serializable
+  (see [ADR 0009](./0009-virtual-module-config.md)). The current config
+  surface is all data — numbers, strings, plain objects — so this binds
+  trivially, and behaviour (callbacks, custom hooks) goes through the
+  event model in [ADR 0003](./0003-event-based-consent-api.md), which is
+  the right shape for that regardless.
 
 ## References
 
 - `packages/astro-consent/src/integration.ts:56-75`
 - README §"CSP strategy"
+- [ADR 0003 — Event-based consent API](./0003-event-based-consent-api.md)
 - [ADR 0005 — Google Consent Mode v2](./0005-google-consent-mode-v2.md)
 - [ADR 0009 — Virtual module for config](./0009-virtual-module-config.md)
+- [ADR 0010 — CSP options for the GCM v2 snippet](./0010-csp-options-for-gcm-snippet.md)
