@@ -47,7 +47,7 @@ real choice now or don't record it.
 
 | #    | Title                                                                                          | Status   |
 | ---- | ---------------------------------------------------------------------------------------------- | -------- |
-| 0001 | [Record architecture decisions](./0001-record-architecture-decisions.md)                       | Proposed |
+| 0001 | [Record architecture decisions](./0001-record-architecture-decisions.md)                       | Accepted |
 | 0002 | [Declarative script blocking via `type="text/plain"`](./0002-declarative-script-blocking.md)   | Proposed |
 | 0003 | [Event-based consent API on `document`](./0003-event-based-consent-api.md)                     | Proposed |
 | 0004 | [Strict-CSP safety via hashed assets](./0004-strict-csp-safety.md)                             | Proposed |
