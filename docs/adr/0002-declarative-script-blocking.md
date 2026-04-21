@@ -1,6 +1,6 @@
 # 0002. Declarative script blocking via `type="text/plain"`
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-04-21
 
 ## Context
@@ -51,7 +51,9 @@ and the component are interchangeable.
   [ADR 0008](./0008-no-teardown-on-revocation.md)).
 - **Negative:** Inline script bodies (no `data-cc-src`) require
   `'unsafe-inline'` or a CSP nonce once activated. We document this and
-  prefer the external form.
+  prefer the external form. The related CSP tension around the GCM v2
+  head-inline snippet is tracked separately in
+  [ADR 0010](./0010-csp-options-for-gcm-snippet.md).
 - **Neutral:** `data-cc-category` is also used on `[role="switch"]` elements
   inside the banner/modal; the script selector is scoped with
   `script[type="text/plain"]` and `iframe[...]:not([src])` to avoid
@@ -74,3 +76,5 @@ and the component are interchangeable.
 - `packages/astro-consent/src/components/ConsentScript.astro`
 - [ADR 0004 — Strict-CSP safety](./0004-strict-csp-safety.md)
 - [ADR 0008 — No teardown on revocation](./0008-no-teardown-on-revocation.md)
+- [ADR 0010 — CSP options for the GCM v2 snippet](./0010-csp-options-for-gcm-snippet.md)
+  (related CSP story for the one permitted inline script)

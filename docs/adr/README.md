@@ -48,7 +48,7 @@ real choice now or don't record it.
 | #    | Title                                                                                          | Status   |
 | ---- | ---------------------------------------------------------------------------------------------- | -------- |
 | 0001 | [Record architecture decisions](./0001-record-architecture-decisions.md)                       | Accepted |
-| 0002 | [Declarative script blocking via `type="text/plain"`](./0002-declarative-script-blocking.md)   | Proposed |
+| 0002 | [Declarative script blocking via `type="text/plain"`](./0002-declarative-script-blocking.md)   | Accepted |
 | 0003 | [Event-based consent API on `document`](./0003-event-based-consent-api.md)                     | Proposed |
 | 0004 | [Strict-CSP safety via hashed assets](./0004-strict-csp-safety.md)                             | Proposed |
 | 0005 | [Google Consent Mode v2 as a first-class opt-in](./0005-google-consent-mode-v2.md)             | Proposed |
@@ -56,6 +56,7 @@ real choice now or don't record it.
 | 0007 | [Category-based consent state with implicit `essential`](./0007-category-based-consent-state.md) | Proposed |
 | 0008 | [No teardown on revocation](./0008-no-teardown-on-revocation.md)                               | Proposed |
 | 0009 | [Virtual module for build-to-runtime config](./0009-virtual-module-config.md)                  | Proposed |
+| 0010 | [CSP options for the GCM v2 snippet](./0010-csp-options-for-gcm-snippet.md)                    | Proposed |
 
 ## Candidates for future ADRs
 
