@@ -55,7 +55,7 @@ real choice now or don't record it.
 | 0006 | [Dual init for View Transitions and classic navigation](./0006-view-transitions-dual-init.md)  | Accepted |
 | 0007 | [Category-based consent state with implicit `essential`](./0007-category-based-consent-state.md) | Accepted |
 | 0008 | [No teardown on revocation](./0008-no-teardown-on-revocation.md)                               | Accepted |
-| 0009 | [Virtual module for build-to-runtime config](./0009-virtual-module-config.md)                  | Proposed |
+| 0009 | [Virtual module for build-to-runtime config](./0009-virtual-module-config.md)                  | Accepted |
 | 0010 | [CSP options for the GCM v2 snippet](./0010-csp-options-for-gcm-snippet.md)                    | Proposed |
 
 ## Candidates for future ADRs

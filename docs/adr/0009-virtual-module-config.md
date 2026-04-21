@@ -1,6 +1,6 @@
 # 0009. Virtual module for build-to-runtime config
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-04-21
 
 ## Context
