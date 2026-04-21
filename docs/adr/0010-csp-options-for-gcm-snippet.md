@@ -1,4 +1,4 @@
-# 0010. CSP options for the GCM v2 head-inline snippet
+# 0010. CSP opt-out for the GCM v2 head-inline snippet
 
 - **Status:** Proposed
 - **Date:** 2026-04-21
@@ -13,70 +13,67 @@ call must run before any downstream gtag/GTM bootstrap, and nothing we
 bundle executes early enough in `<head>` to satisfy that ordering.
 
 The net effect: adopters who enable GCM *and* run a strict CSP either
-weaken their CSP (add `'unsafe-inline'` — unacceptable), allowlist a
-hash, or plumb a nonce through. Today we provide no tooling for either,
-so the CSP story in [ADR 0004](./0004-strict-csp-safety.md) effectively
-doesn't hold once GCM is turned on.
+weaken their CSP (`'unsafe-inline'` — unacceptable), allowlist a hash,
+or plumb a nonce through. Today we offer no escape hatch, so the strict
+CSP story in ADR 0004 breaks the moment GCM is enabled.
 
-The options we looked at:
+The full option space:
 
-1. **Publish the snippet's SHA-256 hash.** Adopters paste it into their
-   CSP as `'sha256-…'`.
-2. **Let adopters opt out of the head-inline.** They ship their own
+1. **Publish the snippet's SHA-256 hash** so adopters paste it into CSP.
+2. **Opt out of the head-inline** — adopter ships their own
    `gtag('consent','default',…)` with their own nonce or hash; our
-   integration keeps validating the mapping, emitting updates on
-   consent events, and falling back via `dataLayer`.
-3. **Nonce support.** Stamp a configured nonce onto the emitted inline
-   `<script>`. Leans on the adopter's SSR / middleware nonce pipeline;
-   worth revisiting alongside Astro 5's experimental CSP work.
-4. **Move the snippet to an external bundled module.** Removes the
-   inline exception entirely but risks a race where GTM loads before our
-   bundled module has executed. High blast radius across SSR streaming,
-   View Transitions, and `defer`-free ordering.
+   integration keeps validating the mapping and emitting updates via the
+   `dataLayer` fallback wired in [ADR 0005](./0005-google-consent-mode-v2.md).
+3. **Nonce support** — stamp a configured nonce onto the emitted inline
+   `<script>`. Leans on the adopter's SSR / middleware nonce pipeline.
+4. **Move the snippet external** — bundled module loaded synchronously
+   from `<head>`. Removes the inline exception entirely but opens
+   ordering races against downstream gtag/GTM. High blast radius.
 
 ## Decision
 
-Implement (1) and (2). Defer (3) and (4) to their own future ADRs if
-real-world evidence surfaces a need.
+Implement **(2) only**: one config knob,
+`googleConsentMode.headInline: boolean` (default `true`).
 
-Concretely:
+- `true` (default): unchanged from today — the inline default-denied
+  snippet is injected at the top of `<head>`. Works out of the box for
+  adopters on `'unsafe-inline'` or permissive CSP.
+- `false`: the integration skips `injectScript('head-inline', ...)`
+  entirely. Adopters ship their own `gtag('consent','default',…)` with
+  whatever CSP credential their setup requires (nonce or hash).
+  Validation, event-driven `gtag('consent','update', …)` dispatches, and
+  the `dataLayer` fallback from [ADR 0005](./0005-google-consent-mode-v2.md)
+  are unchanged, so the adopter's hand-rolled snippet composes with the
+  rest of the integration.
 
-- **Hash.** At build time, compute `SHA-256` of the emitted GCM snippet
-  and log it once (`[astro-consent] CSP hash for GCM snippet: sha256-…`)
-  so adopters can copy it into their CSP header. Also expose it
-  programmatically from the integration hook (exact shape TBD in the
-  implementing PR — options include a return value from
-  `cookieConsent()`, a `logger.info` line, or a virtual module).
-- **`headInline: false` opt-out.** Extend
-  `GoogleConsentModeConfig` with `headInline?: boolean` (default `true`).
-  When `false`, the integration skips
-  `injectScript('head-inline', ...)`. Validation, event-driven updates,
-  and the `dataLayer` fallback are unchanged — adopters get the runtime
-  bridge without the inline snippet.
-
-Nonce and bundled-module paths are explicitly **not** part of this
-decision. If an adopter asks for either, that's a new ADR with its own
-evidence.
+Hash publishing, nonce injection, and external bundling (options 1, 3,
+4) are explicitly **not** part of this decision. If a future adopter
+cohort surfaces real evidence they need any of those, each gets its own
+ADR.
 
 ## Consequences
 
-- **Positive:** Covers the two mainstream strict-CSP postures:
-  hash-based CSP (use (1)) and nonce-based CSP (use (2) and bring your
-  own snippet).
-- **Positive:** Keeps the GCM integration useful even when adopters
-  can't take our inline snippet — the validation + update bridge is
-  where most of the value lives.
-- **Positive:** Doesn't prejudge the nonce or external-bundle
-  conversations. Small surface, reversible.
-- **Negative:** Two solutions instead of one. Docs need to explain when
-  to reach for which; some adopters will pick the wrong one on first
-  try.
-- **Negative:** The hash is deterministic only if the snippet input is
-  deterministic. Any future change to `buildGcmDefaultSnippet` shifts
-  the hash — adopters have to update their CSP. This is inherent to
-  hash-based CSP; document it.
-- **Neutral:** (3) and (4) remain on the table as follow-ups if the
-  two-option set proves insufficient.
+- **Positive:** Universal escape hatch — one knob covers every strict
+  CSP posture. Nonce-CSP adopters pass their own nonce via their own
+  snippet; hash-CSP adopters hash their own snippet; anyone on
+  `'unsafe-inline'` ignores the flag entirely.
+- **Positive:** Minimal surface. One boolean in the config, one branch
+  in the integration hook, no new side outputs (no build-log hashes, no
+  nonce pipelines).
+- **Positive:** `dataLayer` fallback from ADR 0005 makes the opt-out
+  compose cleanly — `gtag('consent','update',…)` still lands even when
+  our snippet never runs.
+- **Negative:** Adopters on hash-CSP who would have liked a
+  pre-computed hash now compute their own (e.g.
+  `printf '%s' "$snippet" | openssl dgst -sha256 -binary | openssl base64`).
+  One command; adopters auditing what lands in their CSP are already
+  reading the snippet anyway.
+- **Negative:** `headInline: false` pushes responsibility onto the
+  adopter to get the default-denied snippet right. Mitigated by pointing
+  at the existing `buildGcmDefaultSnippet` output as a reference template
+  in the README.
+- **Neutral:** Options 1, 3, 4 remain on the table. Each is a future
+  ADR if the one-knob answer proves insufficient.
 
 ## References
 
@@ -84,5 +81,6 @@ evidence.
 - [ADR 0005 — Google Consent Mode v2](./0005-google-consent-mode-v2.md)
 - `packages/astro-consent/src/gcm.ts` — `buildGcmDefaultSnippet`
 - `packages/astro-consent/src/integration.ts:69-75` — the
-  `injectScript('head-inline', …)` call this ADR carves options around
+  `injectScript('head-inline', …)` call that `headInline: false` will
+  gate
 - [MDN — CSP `script-src` hashes](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src#hashes)

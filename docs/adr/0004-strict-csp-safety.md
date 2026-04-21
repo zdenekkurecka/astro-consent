@@ -45,10 +45,10 @@ emitted via `injectScript('head-inline', ...)` and only when GCM is enabled
   protection as any other asset.
 - **Negative:** Adopters who enable GCM on a strict CSP pay the cost of
   the one inline exception — either allowlisting a hash or supplying a
-  nonce. Mitigation is tracked in
-  [ADR 0010](./0010-csp-options-for-gcm-snippet.md) (publish the snippet
-  hash + `googleConsentMode.headInline: false` opt-out); scoped only to
-  the `GCM-enabled × nonce-only-CSP` intersection.
+  nonce. Mitigation is the single `googleConsentMode.headInline: false`
+  opt-out proposed in
+  [ADR 0010](./0010-csp-options-for-gcm-snippet.md); scoped only to the
+  `GCM-enabled × strict-CSP` intersection.
 - **Neutral:** Config reaching the client must be JSON-serializable
   (see [ADR 0009](./0009-virtual-module-config.md)). The current config
   surface is all data — numbers, strings, plain objects — so this binds

@@ -48,9 +48,11 @@ Ship GCM v2 as an opt-in integration surface on the config
 - **Positive:** Build-time validation prevents typos in signal names from
   silently reaching `gtag`.
 - **Negative:** Adds the one permitted inline script (see
-  [ADR 0004](./0004-strict-csp-safety.md)). Adopters on strict CSP have
-  a published-hash path and a `headInline: false` opt-out tracked in
-  [ADR 0010](./0010-csp-options-for-gcm-snippet.md).
+  [ADR 0004](./0004-strict-csp-safety.md)). Adopters on strict CSP get
+  a single escape hatch — `googleConsentMode.headInline: false` — tracked
+  in [ADR 0010](./0010-csp-options-for-gcm-snippet.md); they ship their
+  own snippet with whatever CSP credential (nonce or hash) fits their
+  setup.
 - **Negative:** Couples astro-consent to Google-specific terminology.
   Mitigated by making the whole block opt-in and orthogonal to the core
   category model.
