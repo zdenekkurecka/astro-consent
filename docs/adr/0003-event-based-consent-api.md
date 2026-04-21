@@ -1,6 +1,6 @@
 # 0003. Event-based consent API on `document`
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-04-21
 
 ## Context

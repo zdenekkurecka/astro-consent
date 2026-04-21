@@ -49,7 +49,7 @@ real choice now or don't record it.
 | ---- | ---------------------------------------------------------------------------------------------- | -------- |
 | 0001 | [Record architecture decisions](./0001-record-architecture-decisions.md)                       | Accepted |
 | 0002 | [Declarative script blocking via `type="text/plain"`](./0002-declarative-script-blocking.md)   | Accepted |
-| 0003 | [Event-based consent API on `document`](./0003-event-based-consent-api.md)                     | Proposed |
+| 0003 | [Event-based consent API on `document`](./0003-event-based-consent-api.md)                     | Accepted |
 | 0004 | [Strict-CSP safety via hashed assets](./0004-strict-csp-safety.md)                             | Proposed |
 | 0005 | [Google Consent Mode v2 as a first-class opt-in](./0005-google-consent-mode-v2.md)             | Proposed |
 | 0006 | [Dual init for View Transitions and classic navigation](./0006-view-transitions-dual-init.md)  | Proposed |
