@@ -1,6 +1,6 @@
 # 0008. No teardown on revocation
 
-- **Status:** Proposed
+- **Status:** Accepted
 - **Date:** 2026-04-21
 
 ## Context
@@ -43,9 +43,19 @@ pattern per vendor.
   half-unloaded SDK keeps sending events or corrupts globals.
 - **Positive:** Implementation stays simple: activation is a one-shot
   operation with an idempotency marker (`data-cc-activated`).
-- **Negative:** A user who revokes mid-session and doesn't navigate
+- **Trade-off:** A user who revokes mid-session and doesn't navigate
   continues to have already-activated trackers running until the next
-  page load. This is a compliance surface adopters need to understand.
+  navigation. In practice the window is seconds to minutes, and GDPR
+  Art. 7(3) only guarantees lawfulness of processing *before*
+  withdrawal — not instant teardown after. The practical in-session
+  lever for adopters is the event model from
+  [ADR 0003](./0003-event-based-consent-api.md): GCM v2 `gtag('consent',
+  'update', ...)` fires automatically on `astro-consent:change` (see
+  [ADR 0005](./0005-google-consent-mode-v2.md)), and vendor-specific
+  revoke hooks like `fbq('consent', 'revoke')` are wired from the same
+  event (see `docs/recipes/meta-pixel.md:100-111`). Residual risk is
+  limited to trackers with no opt-out API, between the click and the
+  next navigation.
 - **Neutral:** The constraint is inherited from the third-party ecosystem,
   not from our design — a different architecture wouldn't meaningfully
   change the outcome.
@@ -56,5 +66,7 @@ pattern per vendor.
 - `packages/astro-consent/src/scripts.ts:54-87` (`data-cc-activated`
   marker)
 - `docs/recipes/README.md` ("A note on revocation")
-- `docs/recipes/meta-pixel.md` (vendor-driven teardown example)
+- `docs/recipes/meta-pixel.md:100-111` (vendor-driven teardown example)
 - README §"Revocation caveat" (line 474)
+- [ADR 0003 — Event-based consent API](./0003-event-based-consent-api.md)
+- [ADR 0005 — Google Consent Mode v2](./0005-google-consent-mode-v2.md)
