@@ -1,25 +1,21 @@
 # 0005. Google Consent Mode v2 as a first-class opt-in
 
-- **Status:** Accepted
+- **Status:** Proposed
 - **Date:** 2026-04-21
 
 ## Context
 
-Google's tracking products (GA4, Google Ads, GTM) don't just stop loading
-when a user declines — they expect a `gtag('consent', 'default', …)` call
-*before* the tracker script runs, and a `gtag('consent', 'update', …)` on
-every change. Getting this wrong means either (a) leaky attribution when
-the default isn't set, or (b) broken GA4 reporting when the update never
-fires.
+Google's tracking products (GA4, Google Ads, GTM) expect a
+`gtag('consent', 'default', …)` call *before* the tracker script runs, and a
+`gtag('consent', 'update', …)` on every change. The default call has to be
+inline at the top of `<head>` for this ordering to hold.
 
-Most astro-consent adopters pull in a Google tag, so the choice was either:
-
-1. Leave GCM entirely to the adopter (generic consent events only).
-2. Provide GCM v2 as a first-class, validated integration.
-
-Option 1 means every Google-tag adopter reinvents the same snippet, which
-in practice means many deployments get it wrong. Option 2 widens the
-library's scope but removes an entire category of bug reports.
+The integration could leave this entirely to adopters — generic
+`astro-consent:consent` / `astro-consent:change` events give them enough
+rope. But the snippet is fiddly enough (ordering, signal names, default
+values, region overrides) that it's a frequent source of
+integration bugs, and GCM is common enough in the target use cases to
+justify a first-class surface that keeps the rules in one place.
 
 ## Decision
 

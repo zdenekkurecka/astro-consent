@@ -1,14 +1,14 @@
 # 0008. No teardown on revocation
 
-- **Status:** Accepted
+- **Status:** Proposed
 - **Date:** 2026-04-21
 
 ## Context
 
-A consent manager must allow users to withdraw consent as easily as they
-gave it. The obvious-looking feature is: on revocation, unload the trackers
-that were activated. In practice, that's infeasible for most real
-trackers.
+A consent manager should let users withdraw consent as easily as they
+gave it. The obvious-looking feature is: on revocation, unload the
+trackers that were activated. In practice, that isn't feasible for most
+real-world trackers.
 
 Once activated, third-party SDKs typically:
 
@@ -20,8 +20,7 @@ Once activated, third-party SDKs typically:
 - load nested scripts we don't control and can't enumerate.
 
 Removing the `<script>` tag or deleting the global does not roll any of
-this back, and half-unloading produces exotic failures (e.g. listeners
-still fire but reference a now-undefined `gtag`).
+this back — the SDK is, for practical purposes, load-once.
 
 ## Decision
 
@@ -31,11 +30,12 @@ page's session.
 
 Revocation takes effect on the **next full navigation** — the stored
 consent state is updated immediately, so the next `readConsent()` returns
-the new categories, and the next page load gates the trackers correctly.
+the new categories and the next page load gates the trackers correctly.
 
-Adopters who need hard revocation within the session can listen for
-`astro-consent:change` and call `location.reload()`. This is documented as
-a caveat in the README and in the recipes.
+For trackers that *do* expose a teardown affordance (e.g. Meta Pixel's
+`fbq('consent', 'revoke')`), adopters drive it themselves from an
+`astro-consent:change` listener. The README and recipes document this
+pattern per vendor.
 
 ## Consequences
 
@@ -56,4 +56,5 @@ a caveat in the README and in the recipes.
 - `packages/astro-consent/src/scripts.ts:54-87` (`data-cc-activated`
   marker)
 - `docs/recipes/README.md` ("A note on revocation")
-- README §"Revocation"
+- `docs/recipes/meta-pixel.md` (vendor-driven teardown example)
+- README §"Revocation caveat" (line 474)

@@ -1,15 +1,15 @@
 # 0004. Strict-CSP safety via hashed assets
 
-- **Status:** Accepted
+- **Status:** Proposed
 - **Date:** 2026-04-21
 
 ## Context
 
-A non-trivial share of astro-consent's target adopters run a strict
-`script-src` CSP — often the reason they're adding a consent manager in the
-first place. Shipping an inline `<script>` or `<style>` forces them to add
-`'unsafe-inline'`, a hash, or a nonce for *our* code, which is both a
-maintenance burden and a regression in their security posture.
+Strict `script-src` CSP is a common deployment posture for the kind of
+site that cares about consent in the first place. Shipping an inline
+`<script>` or `<style>` from the library forces adopters to allow
+`'unsafe-inline'`, add a hash, or plumb a nonce through for *our* code —
+all real costs they'd pay per deploy.
 
 Astro provides two injection hooks we can use:
 

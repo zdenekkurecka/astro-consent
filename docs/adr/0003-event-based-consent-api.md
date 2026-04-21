@@ -1,6 +1,6 @@
 # 0003. Event-based consent API on `document`
 
-- **Status:** Accepted
+- **Status:** Proposed
 - **Date:** 2026-04-21
 
 ## Context
@@ -44,20 +44,21 @@ from the package entrypoint so TypeScript users can import them.
 - **Positive:** The library's own subsystems (script blocker, GCM bridge)
   consume the same events, so there's one integration point rather than
   two code paths.
-- **Negative:** Subscribers added *after* the initial `astro-consent:consent`
-  fires will miss it. Documented; adopters can fall back to
-  `window.astroConsent.get()`.
+- **Negative:** Subscribers registered *after* the initial
+  `astro-consent:consent` has fired will miss it. Adopters can poll the
+  current state via `window.astroConsent.get()` as a fallback.
 - **Negative:** The "once per session" guarantee for
   `astro-consent:consent` is managed by a module-level
   `consentFiredThisSession` flag, which must be respected by any new code
   path that emits (see [ADR 0006](./0006-view-transitions-dual-init.md)).
 
-## Alternatives considered
+## Why not other shapes
 
-- **Serialized callbacks in the config.** Closure loss (see Context).
-- **A global `window.astroConsent.on(...)` bus.** Equivalent semantics but
-  reinvents DOM events; chose events for discoverability in DevTools and
-  compatibility with existing `addEventListener` tooling.
+- **Serialized callbacks in the config.** Closure loss (see Context) —
+  the common use case of "call this imported function" doesn't survive.
+- **A bespoke `window.astroConsent.on(...)` pub/sub.** Equivalent
+  semantics to DOM events, but `addEventListener` is already the
+  lingua-franca for this pattern and shows up in DevTools out of the box.
 
 ## References
 

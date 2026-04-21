@@ -1,6 +1,6 @@
 # 0007. Category-based consent state with implicit `essential`
 
-- **Status:** Accepted
+- **Status:** Proposed
 - **Date:** 2026-04-21
 
 ## Context
@@ -56,9 +56,6 @@ interface ConsentState {
 - **Negative:** Category keys are a stringly-typed contract. Mitigated by
   the `ConsentCategoryKey` marker interface (see `types.ts`) that
   adopters can augment with their typed keys.
-- **Negative:** Stored state from a future library version with additional
-  fields will be read back as the older shape on downgrade. We don't
-  currently downgrade, but a breaking-shape change needs its own ADR.
 
 ## References
 

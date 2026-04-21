@@ -1,21 +1,18 @@
 # 0001. Record architecture decisions
 
-- **Status:** Accepted
+- **Status:** Proposed
 - **Date:** 2026-04-21
 
 ## Context
 
-The "why" behind astro-consent's shape is currently scattered across source
-comments, the README, CHANGELOG entries, and individual Changeset files. This
-has worked while the library is small and had effectively one maintainer, but
-it's already painful for contributors and adopters trying to answer questions
-like: *why does the runtime ship as hashed external assets instead of inline
-scripts?*, *why isn't there a callback-based API?*, *why doesn't revocation
-unload trackers?*
+The rationale behind astro-consent's shape currently lives in source
+comments, the README, CHANGELOG entries, and individual Changeset files.
+That's workable while the surface area is small, but the "why" behind
+load-bearing choices — CSP strategy, event vs. callback API, revocation
+model — is hard to find and easy to lose in refactors.
 
-A single source of truth for load-bearing decisions — one that survives
-refactors and code moves — keeps institutional knowledge from leaking out
-with turnover.
+A single place for these decisions, separate from the code that implements
+them, keeps the reasoning discoverable after the files move.
 
 ## Decision
 

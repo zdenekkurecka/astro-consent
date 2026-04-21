@@ -1,6 +1,6 @@
 # 0009. Virtual module for build-to-runtime config
 
-- **Status:** Accepted
+- **Status:** Proposed
 - **Date:** 2026-04-21
 
 ## Context
@@ -57,9 +57,8 @@ Astro emit a hashed `<script type="module" src="...">` for the whole thing.
   functions, regexes, classes. This cascades into the API design (see
   [ADR 0003](./0003-event-based-consent-api.md) for why that's actually
   the right constraint).
-- **Negative:** Ties the integration to Vite — fine today because Astro
-  *is* Vite, but an ADR to revisit if Astro ever supports alternative
-  bundlers.
+- **Neutral:** Uses Vite's virtual-module API. Astro is Vite-based today,
+  so this is a non-issue in practice.
 
 ## References
 

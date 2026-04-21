@@ -1,6 +1,6 @@
 # 0002. Declarative script blocking via `type="text/plain"`
 
-- **Status:** Accepted
+- **Status:** Proposed
 - **Date:** 2026-04-21
 
 ## Context
@@ -57,16 +57,16 @@ and the component are interchangeable.
   `script[type="text/plain"]` and `iframe[...]:not([src])` to avoid
   collision.
 
-## Alternatives considered
+## Why not other shapes
 
-- **Runtime injection via `document.createElement('script')`.** Requires
+- **Runtime injection via `document.createElement('script')`.** Would force
   adopters to move tracker snippets into JS modules and import them
   conditionally — a significant change to established patterns and a
-  blocker for CMS/MDX-authored trackers.
-- **Fetch interception / service worker.** Over-complicated for the problem;
-  wouldn't cover inline scripts.
-- **Server-side filtering.** Works for SSR but not for static output and
-  leaks the adopter's tracker list to the server.
+  non-starter for CMS/MDX-authored trackers.
+- **Fetch interception / service worker.** Wouldn't cover inline scripts,
+  and adds a whole registration lifecycle for a markup-level problem.
+- **Server-side filtering.** Works for SSR but not for static output, and
+  would require the server to know the adopter's tracker list.
 
 ## References
 

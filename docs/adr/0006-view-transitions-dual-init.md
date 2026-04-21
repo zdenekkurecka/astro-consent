@@ -1,6 +1,6 @@
 # 0006. Dual init for View Transitions and classic navigation
 
-- **Status:** Accepted
+- **Status:** Proposed
 - **Date:** 2026-04-21
 
 ## Context
@@ -60,9 +60,6 @@ swap.
 - **Negative:** Any new init code path must decide, deliberately, whether
   it belongs behind one of the guards. Easy to get wrong without reading
   the comments.
-- **Negative:** Adopters who programmatically replace `document` contents
-  outside of Astro's navigation (rare) may need to call
-  `window.astroConsent.show()` manually.
 
 ## References
 
