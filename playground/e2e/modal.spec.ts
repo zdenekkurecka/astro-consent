@@ -54,6 +54,21 @@ test.describe('Preferences modal', () => {
     await expect(modal).toHaveAttribute('aria-labelledby', 'cc-modal-title');
   });
 
+  test('toggles `inert` alongside aria-hidden so axe `aria-hidden-focus` passes', async ({
+    page,
+  }) => {
+    const modal = page.locator('#cc-modal');
+    await expect(modal).toHaveAttribute('inert', /.*/);
+
+    await page.locator('[data-cc=manage]').click();
+    await expectModalVisible(page, true);
+    await expect(modal).not.toHaveAttribute('inert', /.*/);
+
+    await page.keyboard.press('Escape');
+    await expectModalVisible(page, false);
+    await expect(modal).toHaveAttribute('inert', /.*/);
+  });
+
   test('modal accept-all works same as banner accept-all', async ({ page }) => {
     await page.locator('[data-cc=manage]').click();
     await page.locator('[data-cc=modal-accept-all]').click();
