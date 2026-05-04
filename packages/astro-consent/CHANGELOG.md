@@ -1,5 +1,13 @@
 # @zdenekkurecka/astro-consent
 
+## 0.3.1
+
+### Patch Changes
+
+- [#100](https://github.com/zdenekkurecka/astro-consent/pull/100) [`87572e9`](https://github.com/zdenekkurecka/astro-consent/commit/87572e901551e5ced54572fb577a4f6909069abc) Thanks [@zdenekkurecka](https://github.com/zdenekkurecka)! - `#cc-banner` and `#cc-modal` now pair `aria-hidden` with the `inert` attribute so they no longer trip the axe `aria-hidden-focus` rule (flagged by Vercel's live accessibility audit). Previously both containers shipped with `aria-hidden="true"` but kept their action buttons / toggles in the tab order, so keyboard users could focus invisible buttons and AT-aware audits failed. `inert` is added on hide and removed on show, in lock-step with `aria-hidden`. Browsers without `inert` support fall back to the existing aria-hidden-only behavior.
+
+- [#98](https://github.com/zdenekkurecka/astro-consent/pull/98) [`248b064`](https://github.com/zdenekkurecka/astro-consent/commit/248b064ae4f435e8a490517abbb392d79b3c470b) Thanks [@zdenekkurecka](https://github.com/zdenekkurecka)! - Banner now reserves real layout space at the bottom of the host page so it no longer overlays footers and bottom CTAs. The runtime measures the banner on show (and re-measures via `ResizeObserver` when it wraps on narrow viewports), publishing the size as `--cc-banner-height` on `:root`. Default zero-specificity rules consume the var as `padding-bottom` on `body` and `scroll-padding-bottom` on `:root`, both no-ops when the banner isn't visible. The padding transition matches the banner's existing 0.3s ease so the show/hide animates cleanly.
+
 ## 0.3.0
 
 ### Minor Changes
