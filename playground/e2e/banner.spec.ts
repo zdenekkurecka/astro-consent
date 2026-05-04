@@ -30,4 +30,51 @@ test.describe('Banner', () => {
     await expect(link).toHaveAttribute('href', '/cookie-policy');
     await expect(link).toHaveText('Cookie Policy');
   });
+
+  test('toggles `inert` alongside aria-hidden so axe `aria-hidden-focus` passes', async ({
+    page,
+  }) => {
+    const banner = page.locator('#cc-banner');
+    await expectBannerVisible(page, true);
+    await expect(banner).not.toHaveAttribute('inert', /.*/);
+
+    await page.locator('[data-cc=accept-all]').click();
+    await expectBannerVisible(page, false);
+    await expect(banner).toHaveAttribute('inert', /.*/);
+
+    const acceptFocusable = await page.evaluate(() => {
+      const btn = document.querySelector<HTMLElement>('[data-cc=accept-all]');
+      btn?.focus();
+      return document.activeElement === btn;
+    });
+    expect(acceptFocusable).toBe(false);
+  });
+
+  test('publishes --cc-banner-height while visible and clears it on dismiss', async ({ page }) => {
+    await expectBannerVisible(page, true);
+
+    await expect
+      .poll(async () =>
+        page.evaluate(() =>
+          document.documentElement.style.getPropertyValue('--cc-banner-height').trim(),
+        ),
+      )
+      .toMatch(/^\d+(\.\d+)?px$/);
+
+    const heightPx = await page.evaluate(() =>
+      parseFloat(document.documentElement.style.getPropertyValue('--cc-banner-height')),
+    );
+    expect(heightPx).toBeGreaterThan(0);
+
+    await page.locator('[data-cc=accept-all]').click();
+    await expectBannerVisible(page, false);
+
+    await expect
+      .poll(async () =>
+        page.evaluate(() =>
+          document.documentElement.style.getPropertyValue('--cc-banner-height'),
+        ),
+      )
+      .toBe('');
+  });
 });
