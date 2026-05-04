@@ -30,4 +30,32 @@ test.describe('Banner', () => {
     await expect(link).toHaveAttribute('href', '/cookie-policy');
     await expect(link).toHaveText('Cookie Policy');
   });
+
+  test('publishes --cc-banner-height while visible and clears it on dismiss', async ({ page }) => {
+    await expectBannerVisible(page, true);
+
+    await expect
+      .poll(async () =>
+        page.evaluate(() =>
+          document.documentElement.style.getPropertyValue('--cc-banner-height').trim(),
+        ),
+      )
+      .toMatch(/^\d+(\.\d+)?px$/);
+
+    const heightPx = await page.evaluate(() =>
+      parseFloat(document.documentElement.style.getPropertyValue('--cc-banner-height')),
+    );
+    expect(heightPx).toBeGreaterThan(0);
+
+    await page.locator('[data-cc=accept-all]').click();
+    await expectBannerVisible(page, false);
+
+    await expect
+      .poll(async () =>
+        page.evaluate(() =>
+          document.documentElement.style.getPropertyValue('--cc-banner-height'),
+        ),
+      )
+      .toBe('');
+  });
 });

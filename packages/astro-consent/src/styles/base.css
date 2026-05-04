@@ -64,6 +64,23 @@
   --cc-border: #475569;
 }
 
+/* ── Host page spacing for the fixed banner ─────────────────
+ * The runtime sets `--cc-banner-height` on :root while the banner is
+ * visible (and clears it on dismiss). These rules consume it so the host
+ * page reserves real layout space — without them the banner overlays
+ * footers/CTAs at the bottom of the page. Wrapped in :where() for zero
+ * specificity so consumer body/root rules trivially override. The transition
+ * matches the banner's transform/opacity timing below to avoid a jolt.
+ */
+:where(body) {
+  padding-bottom: var(--cc-banner-height, 0);
+  transition: padding-bottom 0.3s ease;
+}
+
+:where(:root) {
+  scroll-padding-bottom: var(--cc-banner-height, 0);
+}
+
 /* ── Banner ─────────────────────────────────────────────── */
 
 .cc-banner {

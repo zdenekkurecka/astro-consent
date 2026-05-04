@@ -140,8 +140,10 @@ const MODAL_ID = 'cc-modal';
 const MODAL_TITLE_ID = 'cc-modal-title';
 const OVERLAY_ID = 'cc-overlay';
 const BANNER_ID = 'cc-banner';
+const BANNER_HEIGHT_VAR = '--cc-banner-height';
 
 let previouslyFocused: HTMLElement | null = null;
+let bannerResizeObserver: ResizeObserver | null = null;
 
 function escapeHtml(str: string): string {
   return str
@@ -305,16 +307,41 @@ export function setContainerTheme(mode: 'auto' | 'light' | 'dark'): void {
   }
 }
 
+/**
+ * Publish the banner's measured height as `--cc-banner-height` on :root so
+ * default `:where(body) { padding-bottom: var(--cc-banner-height) }` (and
+ * `scroll-padding-bottom`) reserve real layout space for the fixed banner.
+ * Without this the host page's footer sits behind the banner.
+ */
+function updateBannerHeightVar(el: HTMLElement): void {
+  const root = document.documentElement;
+  if (!root) return;
+  root.style.setProperty(BANNER_HEIGHT_VAR, `${el.getBoundingClientRect().height}px`);
+}
+
 export function showBanner(): void {
   const el = document.getElementById(BANNER_ID);
-  el?.classList.add('cc-visible');
-  el?.setAttribute('aria-hidden', 'false');
+  if (!el) return;
+  el.classList.add('cc-visible');
+  el.setAttribute('aria-hidden', 'false');
+
+  updateBannerHeightVar(el);
+  // Re-measure on viewport resize (banner wraps on narrow widths) so the
+  // reserved space stays accurate. Feature-detected for older targets.
+  if (typeof ResizeObserver !== 'undefined' && !bannerResizeObserver) {
+    bannerResizeObserver = new ResizeObserver(() => updateBannerHeightVar(el));
+    bannerResizeObserver.observe(el);
+  }
 }
 
 export function hideBanner(): void {
   const el = document.getElementById(BANNER_ID);
   el?.classList.remove('cc-visible');
   el?.setAttribute('aria-hidden', 'true');
+
+  bannerResizeObserver?.disconnect();
+  bannerResizeObserver = null;
+  document.documentElement?.style.removeProperty(BANNER_HEIGHT_VAR);
 }
 
 /**
