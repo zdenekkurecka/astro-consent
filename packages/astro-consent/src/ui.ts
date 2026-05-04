@@ -180,7 +180,7 @@ function createPolicyLinkHTML(
 function createBannerHTML(config: SerializableConsentConfig, text: ResolvedConsentText): string {
   const policyLink = createPolicyLinkHTML(config.cookiePolicy, 'cc-policy-link');
   return `
-    <div class="cc-banner" id="${BANNER_ID}" role="region" aria-label="Cookie consent" aria-hidden="true">
+    <div class="cc-banner" id="${BANNER_ID}" role="region" aria-label="Cookie consent" aria-hidden="true" inert>
       <div class="cc-banner-inner">
         <p class="cc-banner-text">
           ${escapeHtml(text.bannerText)}
@@ -253,6 +253,7 @@ function createModalHTML(config: SerializableConsentConfig, text: ResolvedConsen
       aria-labelledby="${MODAL_TITLE_ID}"
       aria-hidden="true"
       tabindex="-1"
+      inert
     >
       <div class="cc-modal-inner">
         <div class="cc-modal-header">
@@ -324,6 +325,10 @@ export function showBanner(): void {
   if (!el) return;
   el.classList.add('cc-visible');
   el.setAttribute('aria-hidden', 'false');
+  // `inert` is paired with aria-hidden so axe `aria-hidden-focus` is
+  // satisfied when the banner is dismissed: the subtree is unfocusable AND
+  // hidden from AT, instead of just visually hidden with focusable buttons.
+  el.removeAttribute('inert');
 
   updateBannerHeightVar(el);
   // Re-measure on viewport resize (banner wraps on narrow widths) so the
@@ -338,6 +343,7 @@ export function hideBanner(): void {
   const el = document.getElementById(BANNER_ID);
   el?.classList.remove('cc-visible');
   el?.setAttribute('aria-hidden', 'true');
+  el?.setAttribute('inert', '');
 
   bannerResizeObserver?.disconnect();
   bannerResizeObserver = null;
@@ -417,6 +423,9 @@ export function showModal(): void {
 
   modal.classList.add('cc-visible');
   modal.setAttribute('aria-hidden', 'false');
+  // Drop `inert` before the focus dance below — inert blocks programmatic
+  // focus too, so leaving it on would break the requestAnimationFrame focus.
+  modal.removeAttribute('inert');
   if (overlay) {
     overlay.classList.add('cc-visible');
     overlay.setAttribute('aria-hidden', 'false');
@@ -438,6 +447,7 @@ export function hideModal(): void {
   if (modal) {
     modal.classList.remove('cc-visible');
     modal.setAttribute('aria-hidden', 'true');
+    modal.setAttribute('inert', '');
   }
   if (overlay) {
     overlay.classList.remove('cc-visible');
