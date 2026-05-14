@@ -50,6 +50,38 @@ test.describe('Banner', () => {
     expect(acceptFocusable).toBe(false);
   });
 
+  test('dismissing the banner moves focus out before applying aria-hidden', async ({ page }) => {
+    await expectBannerVisible(page, true);
+
+    // Spy on the banner's own setAttribute to capture whether focus was still
+    // inside the subtree at the exact instant `aria-hidden="true"` was applied.
+    // The bug left the just-clicked button focused there, which hides a focused
+    // node from assistive tech ("Blocked aria-hidden … descendant retained
+    // focus"). `inert` blurs it one line later, so checking focus *after*
+    // hideBanner() can't catch the regression — only this instant can.
+    await page.evaluate(() => {
+      const banner = document.getElementById('cc-banner')!;
+      const original = banner.setAttribute.bind(banner);
+      (window as Window & { __focusInBannerAtHide?: boolean }).__focusInBannerAtHide = undefined;
+      banner.setAttribute = (name: string, value: string) => {
+        if (name === 'aria-hidden' && value === 'true') {
+          (window as Window & { __focusInBannerAtHide?: boolean }).__focusInBannerAtHide =
+            !!document.activeElement && banner.contains(document.activeElement);
+        }
+        return original(name, value);
+      };
+    });
+
+    // A real click focuses the button; that's the precondition for the bug.
+    await page.locator('[data-cc=accept-all]').click();
+    await expectBannerVisible(page, false);
+
+    const focusInBannerAtHide = await page.evaluate(
+      () => (window as Window & { __focusInBannerAtHide?: boolean }).__focusInBannerAtHide,
+    );
+    expect(focusInBannerAtHide).toBe(false);
+  });
+
   test('publishes --cc-banner-height while visible and clears it on dismiss', async ({ page }) => {
     await expectBannerVisible(page, true);
 
