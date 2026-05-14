@@ -320,6 +320,22 @@ function updateBannerHeightVar(el: HTMLElement): void {
   root.style.setProperty(BANNER_HEIGHT_VAR, `${el.getBoundingClientRect().height}px`);
 }
 
+/**
+ * Drops focus to `<body>` if it currently sits inside `el`. Must run *before*
+ * `aria-hidden`/`inert` are applied to `el`: hiding an ancestor of the focused
+ * element (e.g. the just-clicked "Accept all" button) hides a focused node
+ * from assistive tech and logs a console warning ("Blocked aria-hidden on an
+ * element because its descendant retained focus"). `inert` blurs descendants
+ * too, but only after `aria-hidden` has already been set, so the warning still
+ * fires unless focus is moved out first.
+ */
+function blurFocusWithin(el: HTMLElement): void {
+  const active = document.activeElement;
+  if (active instanceof HTMLElement && el.contains(active)) {
+    active.blur();
+  }
+}
+
 export function showBanner(): void {
   const el = document.getElementById(BANNER_ID);
   if (!el) return;
@@ -341,9 +357,11 @@ export function showBanner(): void {
 
 export function hideBanner(): void {
   const el = document.getElementById(BANNER_ID);
-  el?.classList.remove('cc-visible');
-  el?.setAttribute('aria-hidden', 'true');
-  el?.setAttribute('inert', '');
+  if (!el) return;
+  blurFocusWithin(el);
+  el.classList.remove('cc-visible');
+  el.setAttribute('aria-hidden', 'true');
+  el.setAttribute('inert', '');
 
   bannerResizeObserver?.disconnect();
   bannerResizeObserver = null;
@@ -445,6 +463,10 @@ export function hideModal(): void {
   const modal = document.getElementById(MODAL_ID);
   const overlay = document.getElementById(OVERLAY_ID);
   if (modal) {
+    // Move focus off any inner control (e.g. the clicked "Accept all" button)
+    // before hiding — the focus restoration below may no-op if its target sits
+    // in an inert subtree, so don't rely on it to clear focus from the modal.
+    blurFocusWithin(modal);
     modal.classList.remove('cc-visible');
     modal.setAttribute('aria-hidden', 'true');
     modal.setAttribute('inert', '');
