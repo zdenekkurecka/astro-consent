@@ -47,3 +47,60 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+
+  # Cross-version coverage for the supported peer range (astro@^5 || ^6 || ^7).
+  # Forces every astro in the workspace to the matrix major via a pnpm override,
+  # installs unfrozen (the override changes the lockfile), and runs the full
+  # e2e suite. Node 22 satisfies all three (astro 5 runs on it; astro 7 needs
+  # >=22.12, which setup-node's "22" resolves to).
+  compat:
+    name: Astro ${{ matrix.astro.name }} (e2e)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        astro:
+          - { range: '^5.0.0', name: '5' }
+          - { range: '^6.0.0', name: '6' }
+          - { range: '^7.0.0', name: '7' }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.8.1
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Pin Astro to ${{ matrix.astro.range }}
+        run: |
+          jq '.pnpm.overrides.astro = "${{ matrix.astro.range }}"' package.json > package.json.tmp
+          mv package.json.tmp package.json
+
+      - name: Install dependencies
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Show resolved Astro
+        run: pnpm ls astro -r | grep -i astro || true
+
+      - name: Install Playwright browsers
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run Playwright tests
+        run: pnpm test
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-astro-${{ matrix.astro.name }}
+          path: playwright-report/
+          retention-days: 7
