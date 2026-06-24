@@ -8,7 +8,7 @@
 [![npm version](https://img.shields.io/npm/v/@zdenekkurecka/astro-consent.svg?style=flat-square)](https://www.npmjs.com/package/@zdenekkurecka/astro-consent)
 [![npm downloads](https://img.shields.io/npm/dm/@zdenekkurecka/astro-consent.svg?style=flat-square)](https://www.npmjs.com/package/@zdenekkurecka/astro-consent)
 [![license](https://img.shields.io/npm/l/@zdenekkurecka/astro-consent.svg?style=flat-square)](./LICENSE)
-[![astro](https://img.shields.io/badge/astro-%5E5%20%7C%7C%20%5E6-ff5e00?style=flat-square&logo=astro&logoColor=white)](https://astro.build)
+[![astro](https://img.shields.io/badge/astro-%5E5%20%7C%7C%20%5E6%20%7C%7C%20%5E7-ff5e00?style=flat-square&logo=astro&logoColor=white)](https://astro.build)
 
 ---
 
@@ -119,7 +119,7 @@ npm install @zdenekkurecka/astro-consent
 yarn add @zdenekkurecka/astro-consent
 ```
 
-Peer dependency: `astro@^5 || ^6`. Node `>=18.17`.
+Peer dependency: `astro@^5 || ^6 || ^7`. Node `>=18.17` (Astro 7 requires Node `>=22.12`).
 
 ## Quick start
 
