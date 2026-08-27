@@ -49,7 +49,7 @@ export default defineConfig({
 });
 ```
 
-### 2. Drop the GA4 tag in your layout
+### 2. Drop the GA4 tag at the top of `<body>`
 
 ```astro
 ---
@@ -57,6 +57,10 @@ export default defineConfig({
 ---
 <html>
   <head>
+    <slot name="head" />
+  </head>
+  <body>
+    <!-- After </head>, so the integration's consent default has already run. -->
     <script
       is:inline
       async
@@ -68,22 +72,26 @@ export default defineConfig({
       gtag('js', new Date());
       gtag('config', 'G-XXXXXXX');
     </script>
-  </head>
-  <body><slot /></body>
+    <slot />
+  </body>
 </html>
 ```
 
-The integration's GCM snippet runs *before* these tags at the top of `<head>`
-(see the README). GA4 boots, reads the denied-by-default signals, and only
-starts writing cookies after `astro-consent:consent` triggers the
-`gtag('consent', 'update', ...)` bridge.
+The integration's GCM snippet is injected into `<head>`, so it runs before
+anything in `<body>` — including these tags. GA4 boots, reads the
+denied-by-default signals, and only starts writing cookies after
+`astro-consent:consent` triggers the `gtag('consent', 'update', ...)` bridge.
 
 ### Gotchas
 
-- **Order matters.** The integration's GCM snippet must execute before
-  `gtag.js`. It does, because the integration injects at the top of `<head>`
-  — as long as you don't inject GA4 *before* the integration's output (e.g.
-  via a custom Astro hook earlier in the pipeline), you're fine.
+- **Order matters, and `<head>` is *not* safe.** The GCM snippet must run
+  before `gtag('config', …)`. Astro emits injected `head-inline` scripts
+  *after* the route's own `<head>` content, so the snippet is the **last**
+  thing in `<head>`, not the first. A tag authored in your layout's `<head>`
+  therefore runs *first* — the exact inversion Consent Mode exists to
+  prevent. Put the tag at the top of `<body>` as above, or inject it from an
+  integration listed after `cookieConsent()` in `integrations` (injected
+  head-inline scripts are emitted in integrations-array order).
 - **CSP.** The GCM default snippet is inline, so `script-src` must allow
   `'unsafe-inline'` (or a matching hash). Same goes for the inline
   `gtag('config', ...)` call above — extract it into an external file if you

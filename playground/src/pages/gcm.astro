@@ -27,8 +27,9 @@ import Layout from '../layouts/Layout.astro';
   <h1>Google Consent Mode v2</h1>
   <p>
     The <code>googleConsentMode</code> config emits a
-    <code>gtag('consent', 'default', …)</code> call inline at the top of
-    <code>&lt;head&gt;</code>, then bridges
+    <code>gtag('consent', 'default', …)</code> call inline at the end of
+    <code>&lt;head&gt;</code> — before anything in <code>&lt;body&gt;</code>
+    — then bridges
     <code>astro-consent:consent</code> / <code>astro-consent:change</code>
     into <code>gtag('consent', 'update', …)</code>.
   </p>

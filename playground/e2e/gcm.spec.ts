@@ -133,4 +133,44 @@ test.describe('Google Consent Mode v2', () => {
       ad_storage: 'granted',
     });
   });
+
+  /**
+   * Regression guard for #115. The docs used to claim the snippet lands at the
+   * *top* of `<head>`; Astro actually emits injected `head-inline` scripts
+   * after the route's own head content, so it is the last thing in `<head>`.
+   * What we do guarantee — and what the recipes now tell consumers to rely on
+   * — is that it precedes everything in `<body>`.
+   */
+  test('default snippet is in <head>, ahead of everything in <body>', async ({ request }) => {
+    const html = await (await request.get('/gcm')).text();
+
+    const snippet = html.indexOf("gtag('consent','default'");
+    const headEnd = html.indexOf('</head>');
+    const bodyStart = html.indexOf('<body');
+    const pageLoader = html.indexOf('googletagmanager.com/gtag/js');
+    const pageConfig = html.indexOf("gtag('config', 'G-PLAYGRNDXX'");
+
+    expect(snippet).toBeGreaterThan(-1);
+    expect(headEnd).toBeGreaterThan(-1);
+    expect(headEnd).toBeLessThan(bodyStart);
+
+    // Inside <head> …
+    expect(snippet).toBeLessThan(headEnd);
+    // … and therefore ahead of the tag the recipes place at the top of <body>.
+    expect(pageLoader).toBeGreaterThan(headEnd);
+    expect(pageConfig).toBeGreaterThan(snippet);
+  });
+
+  test('consent default is queued before the page\'s own gtag calls', async ({ page }) => {
+    const entries = await readDataLayer(page);
+    const isCall = (e: unknown, cmd: string) => Array.isArray(e) && e[0] === cmd;
+
+    const firstDefault = entries.findIndex(
+      (e) => Array.isArray(e) && e[0] === 'consent' && e[1] === 'default',
+    );
+    const firstConfig = entries.findIndex((e) => isCall(e, 'config'));
+
+    expect(firstDefault).toBeGreaterThanOrEqual(0);
+    expect(firstConfig).toBeGreaterThan(firstDefault);
+  });
 });
