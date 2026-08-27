@@ -124,8 +124,10 @@ function assertValue(value: unknown, path: string): void {
 }
 
 /**
- * Build the inline snippet that pre-declares GCM defaults at the top of
- * `<head>`. The snippet:
+ * Build the inline snippet that pre-declares GCM defaults in `<head>`.
+ * (Astro emits it after the route's own `<head>` content — see
+ * `GoogleConsentModeConfig` for what that means for loader placement.)
+ * The snippet:
  *
  *  1. Initializes `window.dataLayer` and a global `gtag(…)` helper.
  *  2. Calls `gtag('consent', 'default', { …denied…, wait_for_update })` with

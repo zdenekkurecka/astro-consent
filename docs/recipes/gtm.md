@@ -49,7 +49,7 @@ export default defineConfig({
 });
 ```
 
-### 2. Drop the GTM snippet in your layout
+### 2. Drop the GTM snippet at the top of `<body>`
 
 ```astro
 ---
@@ -57,6 +57,10 @@ export default defineConfig({
 ---
 <html>
   <head>
+    <slot name="head" />
+  </head>
+  <body>
+    <!-- After </head>, so the integration's consent default has already run. -->
     <script is:inline>
       (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
       new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -65,8 +69,7 @@ export default defineConfig({
       f.parentNode.insertBefore(j,f);
       })(window,document,'script','dataLayer','GTM-XXXXXXX');
     </script>
-  </head>
-  <body>
+
     <!-- GTM noscript fallback. -->
     <noscript>
       <iframe
@@ -81,8 +84,18 @@ export default defineConfig({
 </html>
 ```
 
-The integration emits its GCM default snippet at the top of `<head>` *before*
-GTM loads, so `gtag('consent', 'default', …)` runs first. Each tag you
+The integration injects its GCM default snippet into `<head>`, so it runs
+before everything in `<body>` — including the loader above — and
+`gtag('consent', 'default', …)` lands first.
+
+Note that `<head>` is **not** a safe place for the loader: Astro emits
+injected `head-inline` scripts *after* the route's own `<head>` content, so
+the GCM snippet is the last thing in `<head>`, not the first. A loader
+authored in your layout's `<head>` would run before it. If you do need it in
+`<head>`, inject it from an integration listed after `cookieConsent()` —
+injected head-inline scripts are emitted in integrations-array order.
+
+Each tag you
 configure in the GTM UI should have its "Consent Settings" set to "Require
 additional consent" for the relevant signals — GTM will then defer or fire
 them based on the signal state.

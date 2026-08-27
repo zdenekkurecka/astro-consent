@@ -38,10 +38,13 @@ export type GoogleConsentRegionValue = GoogleConsentValue | GoogleConsentDefault
 /**
  * Google Consent Mode v2 configuration.
  *
- * When set, the integration injects an inline snippet at the top of `<head>`
- * that bootstraps `window.dataLayer` + `gtag` and calls
- * `gtag('consent', 'default', {...})` before any downstream GTM / gtag.js
- * loads. Subsequent `astro-consent:consent` and `astro-consent:change` events
+ * When set, the integration injects an inline snippet into `<head>` that
+ * bootstraps `window.dataLayer` + `gtag` and calls
+ * `gtag('consent', 'default', {...})`. Astro emits injected `head-inline`
+ * scripts *after* the route's own `<head>` content, so the snippet runs
+ * before anything in `<body>` but *after* any script your layout puts in
+ * `<head>` — load GTM / gtag.js from the top of `<body>`, or from an
+ * integration listed after `cookieConsent()`. Subsequent `astro-consent:consent` and `astro-consent:change` events
  * automatically fire `gtag('consent', 'update', {...})` with the signals
  * derived from `mapping`.
  *
@@ -218,9 +221,11 @@ export interface ConsentConfig<K extends string = string> {
 
   /**
    * Google Consent Mode v2 integration. When configured, an inline snippet
-   * is injected at the top of `<head>` to pre-declare denied defaults before
-   * any GTM/gtag.js loads, and consent events automatically translate into
-   * `gtag('consent', 'update', …)` calls.
+   * is injected into `<head>` to pre-declare denied defaults, and consent
+   * events automatically translate into `gtag('consent', 'update', …)`
+   * calls. The snippet is emitted after the route's own `<head>` content,
+   * so load GTM/gtag.js from the top of `<body>` (or from an integration
+   * listed after `cookieConsent()`) to keep it ahead of them.
    *
    * Opt-in — omit this to keep the integration strict-CSP safe.
    */

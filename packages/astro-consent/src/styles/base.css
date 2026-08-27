@@ -11,6 +11,8 @@
   --cc-text: #0f172a;
   --cc-text-muted: #64748b;
   --cc-border: #e2e8f0;
+  --cc-toggle-off: #64748b;
+  --cc-toggle-knob: #ffffff;
   --cc-radius: 1.5rem;
   --cc-radius-pill: 9999px;
   --cc-font-family: inherit;
@@ -20,7 +22,8 @@
  * Zero specificity via :where() so any user override in their
  * own stylesheet wins without !important.
  * WCAG 2.1 AA: text on --cc-bg and --cc-text-muted on --cc-bg
- * both clear 4.5:1 contrast.
+ * both clear 4.5:1 contrast (1.4.3), and --cc-toggle-off /
+ * --cc-toggle-knob clear 3:1 (1.4.11) — see .cc-toggle-slider.
  */
 @media (prefers-color-scheme: dark) {
   :where(:root) {
@@ -32,6 +35,8 @@
     --cc-text: #f1f5f9;
     --cc-text-muted: #94a3b8;
     --cc-border: #475569;
+    --cc-toggle-off: #7a8699;
+    --cc-toggle-knob: #ffffff;
   }
 }
 
@@ -51,6 +56,8 @@
   --cc-text: #0f172a;
   --cc-text-muted: #64748b;
   --cc-border: #e2e8f0;
+  --cc-toggle-off: #64748b;
+  --cc-toggle-knob: #ffffff;
 }
 
 :where([data-cc-theme='dark']) {
@@ -62,6 +69,8 @@
   --cc-text: #f1f5f9;
   --cc-text-muted: #94a3b8;
   --cc-border: #475569;
+  --cc-toggle-off: #7a8699;
+  --cc-toggle-knob: #ffffff;
 }
 
 /* ── Host page spacing for the fixed banner ─────────────────
@@ -283,7 +292,17 @@
   color: var(--cc-text-muted);
 }
 
-/* ── Toggle Switch ──────────────────────────────────────── */
+/* ── Toggle Switch ──────────────────────────────────────────
+ * The off state needs its own token, not --cc-border: WCAG 1.4.11
+ * wants 3:1 for a control's boundary, while --cc-border also draws
+ * the banner hairline, the .cc-badge outline and the secondary
+ * button's border + hover fill, where a faint value is correct.
+ * Both boundaries must clear 3:1 against the .cc-category card
+ * (#fafafa light / #232d3f dark), not against --cc-bg:
+ *   light  #64748b  4.56:1 track-vs-card, 4.76:1 knob-vs-track
+ *   dark   #7a8699  3.75:1 track-vs-card, 3.69:1 knob-vs-track
+ * The on state uses --cc-primary (4.95:1 / 3.76:1).
+ */
 
 .cc-toggle {
   position: relative;
@@ -303,7 +322,7 @@
 .cc-toggle-slider {
   position: absolute;
   inset: 0;
-  background-color: var(--cc-border);
+  background-color: var(--cc-toggle-off);
   border-radius: var(--cc-radius-pill);
   cursor: pointer;
   transition: background-color 0.2s ease;
@@ -316,7 +335,7 @@
   width: 1.125rem;
   left: 0.1875rem;
   bottom: 0.1875rem;
-  background-color: white;
+  background-color: var(--cc-toggle-knob);
   border-radius: 50%;
   transition: transform 0.2s ease;
   box-sizing: border-box;

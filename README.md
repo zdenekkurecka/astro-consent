@@ -230,7 +230,7 @@ interface ConsentConfig {
 
   /**
    * Google Consent Mode v2 integration. When set, the integration injects an
-   * inline snippet at the top of `<head>` to pre-declare denied defaults, and
+   * inline snippet into `<head>` to pre-declare denied defaults, and
    * auto-dispatches `gtag('consent', 'update', …)` on every consent event.
    *
    * Opt-in. Requires `'unsafe-inline'` (or a matching hash) under strict CSP —
@@ -254,6 +254,7 @@ interface ConsentText {
   // Essential category
   essentialLabel?: string;
   essentialDescription?: string;
+  essentialBadge?: string;   // the "Required" pill on the essential row
 
   /** Per-category label/description overrides (key = category key). */
   categories?: Record<string, { label?: string; description?: string }>;
@@ -506,7 +507,7 @@ cookieConsent({
 
 What the integration does for you:
 
-1. Injects an inline snippet at the top of `<head>` that bootstraps
+1. Injects an inline snippet into `<head>` that bootstraps
    `window.dataLayer` + `gtag` and calls `gtag('consent', 'default', { …,
    wait_for_update: 500 })` with every mapped signal set to `"denied"` (unless
    overridden via `defaults` / `regions`).
@@ -516,21 +517,59 @@ What the integration does for you:
 3. Forwards `adsDataRedaction` / `urlPassthrough` as `gtag('set', …)` calls in
    the default snippet.
 
-Drop your GA4 / Google Ads tag anywhere in your layout (or gate it via
-`data-cc-category` — the two compose) and it will pick up the consent state
-automatically:
+**Where to put your Google tag.** Astro emits injected `head-inline` scripts
+*after* the route's own `<head>` content, so the default snippet is the last
+thing in `<head>` — not the first. It runs before everything in `<body>`, but
+*after* any script your layout authors in `<head>`. Load your tag from the top
+of `<body>`:
 
 ```astro
-<script
-  is:inline
-  async
-  src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXX"
-></script>
-<script is:inline>
-  gtag('js', new Date());
-  gtag('config', 'G-XXXXXXX');
-</script>
+---
+// src/layouts/Layout.astro
+---
+<html>
+  <head>
+    <slot name="head" />
+  </head>
+  <body>
+    <!-- After </head>, so the integration's consent default has already run. -->
+    <script
+      is:inline
+      async
+      src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXX"
+    ></script>
+    <script is:inline>
+      window.dataLayer = window.dataLayer || [];
+      function gtag() { dataLayer.push(arguments); }
+      gtag('js', new Date());
+      gtag('config', 'G-XXXXXXX');
+    </script>
+    <slot />
+  </body>
+</html>
 ```
+
+If you need the tag in `<head>`, inject it from an integration listed *after*
+`cookieConsent()` — Astro emits injected head-inline scripts in
+integrations-array order:
+
+```js
+// astro.config.mjs
+integrations: [
+  cookieConsent({ /* … googleConsentMode … */ }),
+  // Must come after cookieConsent().
+  {
+    name: 'gtag-loader',
+    hooks: {
+      'astro:config:setup': ({ injectScript }) =>
+        injectScript('head-inline', GTAG_LOADER_SNIPPET),
+    },
+  },
+],
+```
+
+Either way the tag picks up the consent state automatically. You can also gate
+it via `data-cc-category` — the two compose.
 
 **CSP caveat.** The default snippet is inline, so enabling
 `googleConsentMode` requires `script-src` to include `'unsafe-inline'` or a
@@ -616,6 +655,7 @@ cookieConsent({
       savePreferences: 'Save preferences',
       essentialLabel: 'Essential',
       essentialDescription: 'Required for the website to function. Cannot be disabled.',
+      essentialBadge: 'Required',
       categories: {
         analytics: {
           label: 'Analytics',
@@ -633,6 +673,7 @@ cookieConsent({
       savePreferences: 'Uložit předvolby',
       essentialLabel: 'Nezbytné',
       essentialDescription: 'Nutné pro fungování webu. Nelze vypnout.',
+      essentialBadge: 'Vždy zapnuto',
       categories: {
         analytics: {
           label: 'Analytické',
@@ -674,6 +715,15 @@ stylesheet without forking anything:
   --cc-font-family: 'Inter', sans-serif;
 }
 ```
+
+The preference toggle has its own `--cc-toggle-off` / `--cc-toggle-knob` pair
+rather than reusing `--cc-border`, because the two want opposite things:
+`--cc-border` draws hairlines (the banner's top rule, the `.cc-badge` outline,
+the secondary button), while the toggle's off state has to clear
+[WCAG 1.4.11](https://www.w3.org/WAI/WCAG21/Understanding/non-text-contrast.html)'s
+3:1 for non-text contrast. Remapping `--cc-border` to your own palette therefore
+leaves the toggle legible. If you do restyle the toggle, keep both the track
+against the category card *and* the knob against the track at 3:1 or better.
 
 ### Use with a strict Content Security Policy
 

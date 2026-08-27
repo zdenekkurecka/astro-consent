@@ -67,9 +67,14 @@ export default function cookieConsent<K extends string = string>(
         injectScript('page', 'import "virtual:astro-consent/init";');
 
         // Google Consent Mode v2: inject the default-denied snippet inline
-        // at the top of <head> so `gtag('consent', 'default', …)` runs before
-        // any downstream GTM/gtag.js. This is the one case where we emit an
-        // inline <script> — opt-in and documented as a CSP caveat.
+        // into <head>. NOTE: Astro emits injected `head-inline` scripts at
+        // the *end* of <head>, after the route's own head content — this is
+        // not "the top of <head>". The snippet therefore precedes everything
+        // in <body>, but a loader authored in the layout's own <head> would
+        // still run first; the docs tell consumers to load GTM/gtag.js from
+        // the top of <body> or from an integration ordered after this one.
+        // This is the one case where we emit an inline <script> — opt-in and
+        // documented as a CSP caveat.
         if (gcm && gcm.enabled !== false) {
           injectScript('head-inline', buildGcmDefaultSnippet(gcm));
         }
