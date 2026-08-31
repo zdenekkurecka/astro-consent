@@ -16,6 +16,15 @@
   --cc-radius: 1.5rem;
   --cc-radius-pill: 9999px;
   --cc-font-family: inherit;
+
+  /* Layout. The banner bar itself is always full-bleed; these size the
+   * centered content inside it. `--cc-banner-max-width: none` makes the
+   * content full-bleed too. `--cc-banner-text-min-width` is the width the
+   * message refuses to shrink below before the actions wrap onto their own
+   * row — lower it in step with a narrower bar, or the actions wrap sooner
+   * than the width you asked for implies. */
+  --cc-banner-max-width: 72rem;
+  --cc-banner-text-min-width: 280px;
 }
 
 /* ── Dark mode defaults (prefers-color-scheme) ──────────────
@@ -116,7 +125,7 @@
 }
 
 .cc-banner-inner {
-  max-width: 72rem;
+  max-width: var(--cc-banner-max-width);
   margin: 0 auto;
   padding: 1rem 1.5rem;
   display: flex;
@@ -128,7 +137,7 @@
 
 .cc-banner-text {
   flex: 1 1 0%;
-  min-width: 280px;
+  min-width: var(--cc-banner-text-min-width);
   margin: 0;
   font-size: 0.875rem;
   line-height: 1.5;

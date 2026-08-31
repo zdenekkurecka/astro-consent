@@ -725,6 +725,27 @@ the secondary button), while the toggle's off state has to clear
 leaves the toggle legible. If you do restyle the toggle, keep both the track
 against the category card *and* the knob against the track at 3:1 or better.
 
+Layout is themeable the same way. The bottom banner bar is always full-bleed;
+what `--cc-banner-max-width` caps is the content centered inside it, so you can
+line the bar up with your own grid instead of overriding `.cc-banner-inner`:
+
+```css
+:root {
+  --cc-banner-max-width: 80rem; /* default 72rem; `none` for full-bleed */
+}
+```
+
+If you go *narrower*, lower `--cc-banner-text-min-width` (default `280px`) in
+step with it. That token is the width the message refuses to shrink below, and
+the banner's buttons share its row only while the content box is wider than the
+two of them together — leave the floor at `280px` under a narrow bar and the
+buttons wrap onto their own row earlier than the width you set implies.
+
+Both are plain custom properties on `:root`, so they inherit the same
+zero-specificity defaults as the color tokens: your override wins on cascade
+without `!important` and without depending on a class name this package treats
+as internal.
+
 ### Use with a strict Content Security Policy
 
 The integration is compatible with strict CSPs out of the box:
